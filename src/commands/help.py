@@ -16,11 +16,13 @@ class HelpCommand(AbstractCommand):
         additional = message[5:].strip().lstrip('!')
 
         if not additional:
-            response = "Valid commands are: !ping, !hello, !help"
+            response = "Valid commands are: !ping, !hello, !help, !nodes"
         elif additional == "hello":
             response = "!hello - Responds with a greeting"
         elif additional == "ping":
             response = "!ping (+ optional correlation message) - Responds with a pong"
+        elif additional == "nodes":
+            response = "!nodes - Responds with details about the nodes this device has seen"
         elif additional == "help":
             response = "!help - Shows this help message"
         else:

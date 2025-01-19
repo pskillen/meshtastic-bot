@@ -145,3 +145,11 @@ class MeshtasticBot:
 
         print(f"- Plus {len(offline_nodes)} offline nodes")
 
+    def get_global_context(self):
+        return {
+            'nodes': self.nodes,
+            'online_nodes': {k: v for k, v in self.nodes.items() if
+                             v.last_heard > datetime.now().timestamp() - self.ONLINE_THRESHOLD},
+            'offline_nodes': {k: v for k, v in self.nodes.items() if
+                              v.last_heard <= datetime.now().timestamp() - self.ONLINE_THRESHOLD}
+        }
