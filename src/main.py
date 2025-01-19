@@ -12,10 +12,7 @@ def main():
 
     try:
         bot.connect()
-        # Keep the script running to listen for messages
-        while True:
-            time.sleep(1)
-
+        bot.start_scheduler()
         bot.disconnect()
 
     except Exception as e:

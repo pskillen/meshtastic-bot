@@ -1,5 +1,7 @@
+import time
 from datetime import datetime, timezone
 from typing import Dict
+import schedule
 
 import meshtastic.tcp_interface
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
@@ -66,9 +68,11 @@ class MeshtasticBot:
         sender = packet['fromId']
         node = self.nodes[sender]
 
-        # Update last_heard for this node
         if node:
+            # Update last_heard for this node
             node.last_heard = int(datetime.now().timestamp())
+            # Increment packets_today for this node
+            node.packets_today += 1
 
     def on_node_updated(self, node, interface):
         # Check if the node is a new user
@@ -114,6 +118,7 @@ class MeshtasticBot:
         mesh_node.last_heard = data.get('lastHeard', 0)
         mesh_node.device_metrics = device_metrics
         mesh_node.is_favorite = data.get('isFavorite', False)
+        mesh_node.packets_today = 0
 
         return mesh_node
 
@@ -136,10 +141,8 @@ class MeshtasticBot:
 
     def print_nodes(self):
         # filter nodes where last heard is more than 2 hours ago
-        online_nodes = {k: v for k, v in self.nodes.items() if
-                        v.last_heard > datetime.now().timestamp() - self.ONLINE_THRESHOLD}
-        offline_nodes = {k: v for k, v in self.nodes.items() if
-                         v.last_heard <= datetime.now().timestamp() - self.ONLINE_THRESHOLD}
+        online_nodes = self.get_online_nodes()
+        offline_nodes = self.get_offline_nodes()
 
         # print all nodes, sorted by last heard descending
         print("Online nodes:")
@@ -153,8 +156,25 @@ class MeshtasticBot:
     def get_global_context(self):
         return {
             'nodes': self.nodes,
-            'online_nodes': {k: v for k, v in self.nodes.items() if
-                             v.last_heard > datetime.now().timestamp() - self.ONLINE_THRESHOLD},
-            'offline_nodes': {k: v for k, v in self.nodes.items() if
-                              v.last_heard <= datetime.now().timestamp() - self.ONLINE_THRESHOLD}
+            'online_nodes': self.get_online_nodes(),
+            'offline_nodes': self.get_offline_nodes(),
         }
+
+    def get_online_nodes(self):
+        return {k: v for k, v in self.nodes.items() if
+                v.last_heard > datetime.now().timestamp() - self.ONLINE_THRESHOLD}
+
+    def get_offline_nodes(self):
+        return {k: v for k, v in self.nodes.items() if
+                v.last_heard <= datetime.now().timestamp() - self.ONLINE_THRESHOLD}
+
+    def reset_packets_today(self):
+        for node in self.nodes.values():
+            node.packets_today = 0
+        print(f"Reset all packets_today counts at {datetime.now()}")
+
+    def start_scheduler(self):
+        schedule.every().day.at("00:00").do(self.reset_packets_today)
+        while True:
+            schedule.run_pending()
+            time.sleep(1)
