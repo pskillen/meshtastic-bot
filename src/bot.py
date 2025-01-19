@@ -24,8 +24,8 @@ class MeshtasticBot:
     def connect(self):
         print(f"Connecting to Meshtastic node at {self.address}...")
         self.init_complete = False
+        pub.subscribe(self.on_receive, "meshtastic.receive")
         pub.subscribe(self.on_receive_text, "meshtastic.receive.text")
-        # pub.subscribe(self.on_receive_user, "meshtastic.receive.user")
         pub.subscribe(self.on_node_updated, "meshtastic.node.updated")
         pub.subscribe(self.on_connection, "meshtastic.connection.established")
         self.interface = meshtastic.tcp_interface.TCPInterface(hostname=self.address)
@@ -62,8 +62,13 @@ class MeshtasticBot:
             except Exception as e:
                 print(f"Error handling message: {e}")
 
-    # def on_receive_user(self, packet, interface):
-    #     print(f"Received user: {packet}")
+    def on_receive(self, packet: MeshPacket, interface):
+        sender = packet['fromId']
+        node = self.nodes[sender]
+
+        # Update last_heard for this node
+        if node:
+            node.last_heard = int(datetime.now().timestamp())
 
     def on_node_updated(self, node, interface):
         # Check if the node is a new user
