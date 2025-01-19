@@ -15,6 +15,7 @@ from src.persistence.AbstractPersistence import AbstractPersistence
 class MeshtasticBot:
     interface: meshtastic.tcp_interface.TCPInterface
     nodes: dict[str, MeshNode]
+    admin_nodes: list[str]
     init_complete: bool
     persistence: Optional[AbstractPersistence]
     packet_counter_reset_time: datetime
@@ -22,6 +23,7 @@ class MeshtasticBot:
     ONLINE_THRESHOLD = 7200  # 2 hours
 
     def __init__(self, address: str):
+        self.admin_nodes = []
         self.address = address
         self.nodes = {}
         self.init_complete = False

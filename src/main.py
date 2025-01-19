@@ -1,15 +1,22 @@
-import time
+import os
+
+from dotenv import load_dotenv
 
 from src.bot import MeshtasticBot
 from src.persistence.SqlitePersistence import SqlitePersistence
 
-# Replace with the IP address of your Meshtastic node
-MESHTASTIC_IP = "192.168.178.47"
+# Load environment variables from .env file
+load_dotenv()
+
+# Get the IP address and admin nodes from environment variables
+MESHTASTIC_IP = os.getenv("MESHTASTIC_IP")
+ADMIN_NODES = os.getenv("ADMIN_NODES").split(',')
 
 
 def main():
     # Connect to the Meshtastic node over WiFi
     bot = MeshtasticBot(MESHTASTIC_IP)
+    bot.admin_nodes = ADMIN_NODES
 
     try:
         bot.persistence = SqlitePersistence()
