@@ -11,6 +11,7 @@ class PingCommand(AbstractCommand):
     def handle_packet(self, packet: MeshPacket) -> None:
         message = packet['decoded']['text']
         sender = packet['fromId']
+        hops_away = packet['hopStart'] - packet['hopLimit']
 
         # trim off the '!ping' command from the message
         additional = message[5:].strip()
@@ -18,6 +19,8 @@ class PingCommand(AbstractCommand):
         response = f"!pong"
         if additional:
             response = f"!pong: {additional}"
+
+        response += f" (ping took {hops_away} hops)"
 
         print(f"Sending response: '{response}'")
 
