@@ -16,8 +16,8 @@ class CommandFactory:
             "args": []
         },
         "!nodes": {
-            "class": "src.commands.template.TemplateCommand",
-            "args": ["nodes", "Nodes: {{ nodes|length }} ({{ online_nodes|length }} online, {{ offline_nodes|length }} offline)"]
+            "class": "src.commands.nodes.NodesCommand",
+            "args": []
         },
     }
 
