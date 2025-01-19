@@ -16,7 +16,7 @@ class NodesCommand(AbstractCommand):
         offline_nodes = self.bot.get_offline_nodes()
 
         # get nodes sorted by number of packets received
-        busy_nodes = sorted(nodes.values(), key=lambda node: node.packets_today, reverse=True)
+        busy_nodes = sorted(nodes.values(), key=lambda n: n.packets_today, reverse=True)
 
         response = f"Nodes: {len(nodes)} ({len(online_nodes)} online, {len(offline_nodes)} offline). "
 
@@ -24,6 +24,7 @@ class NodesCommand(AbstractCommand):
         response += "\n\nBusy nodes:\n"
         for i, node in enumerate(busy_nodes[:5]):
             response += f"- {node.user.short_name} ({node.packets_today} packets)\n"
+        response += f"(last reset at {self.bot.packet_counter_reset_time.strftime('%H:%M:%S')})"
 
         print(f"Sending response: '{response}'")
 

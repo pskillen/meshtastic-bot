@@ -17,6 +17,7 @@ class MeshtasticBot:
     nodes: dict[str, MeshNode]
     init_complete: bool
     persistence: Optional[AbstractPersistence]
+    packet_counter_reset_time: datetime
 
     ONLINE_THRESHOLD = 7200  # 2 hours
 
@@ -25,6 +26,7 @@ class MeshtasticBot:
         self.nodes = {}
         self.init_complete = False
         self.persistence = None
+        self.packet_counter_reset_time = datetime.now()
 
     def connect(self):
         print(f"Connecting to Meshtastic node at {self.address}...")
@@ -177,7 +179,8 @@ class MeshtasticBot:
     def reset_packets_today(self):
         for node in self.nodes.values():
             node.packets_today = 0
-        print(f"Reset all packets_today counts at {datetime.now()}")
+        self.packet_counter_reset_time = datetime.now()
+        print(f"Reset all packets_today counts at {self.packet_counter_reset_time}")
 
     def start_scheduler(self):
         schedule.every().day.at("00:00").do(self.reset_packets_today)
