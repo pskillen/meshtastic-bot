@@ -14,6 +14,8 @@ class MeshtasticBot:
     nodes: dict[str, MeshNode]
     init_complete: bool
 
+    ONLINE_THRESHOLD = 7200  # 2 hours
+
     def __init__(self, address: str):
         self.address = address
         self.nodes = {}
@@ -129,8 +131,10 @@ class MeshtasticBot:
 
     def print_nodes(self):
         # filter nodes where last heard is more than 2 hours ago
-        online_nodes = {k: v for k, v in self.nodes.items() if v.last_heard > datetime.now().timestamp() - 7200}
-        offline_nodes = {k: v for k, v in self.nodes.items() if v.last_heard <= datetime.now().timestamp() - 7200}
+        online_nodes = {k: v for k, v in self.nodes.items() if
+                        v.last_heard > datetime.now().timestamp() - self.ONLINE_THRESHOLD}
+        offline_nodes = {k: v for k, v in self.nodes.items() if
+                         v.last_heard <= datetime.now().timestamp() - self.ONLINE_THRESHOLD}
 
         # print all nodes, sorted by last heard descending
         print("Online nodes:")
