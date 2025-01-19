@@ -1,20 +1,22 @@
 import time
 from datetime import datetime, timezone
-from typing import Dict
-import schedule
+from typing import Dict, Optional
 
 import meshtastic.tcp_interface
+import schedule
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 from pubsub import pub
 
 from src.commands.factory import CommandFactory
 from src.data_classes import MeshNode, User, Position, DeviceMetrics
+from src.persistence.AbstractPersistence import AbstractPersistence
 
 
 class MeshtasticBot:
     interface: meshtastic.tcp_interface.TCPInterface
     nodes: dict[str, MeshNode]
     init_complete: bool
+    persistence: Optional[AbstractPersistence]
 
     ONLINE_THRESHOLD = 7200  # 2 hours
 
@@ -22,6 +24,7 @@ class MeshtasticBot:
         self.address = address
         self.nodes = {}
         self.init_complete = False
+        self.persistence = None
 
     def connect(self):
         print(f"Connecting to Meshtastic node at {self.address}...")
@@ -79,6 +82,9 @@ class MeshtasticBot:
         if node['user'] is not None:
             mesh_node = self.parse_mesh_node(node)
             self.nodes[mesh_node.user.id] = mesh_node
+
+            if self.persistence:
+                self.persistence.store_node_id(mesh_node.num)
 
             if self.init_complete:
                 last_heard = MeshtasticBot.pretty_print_last_heard(mesh_node.last_heard)
