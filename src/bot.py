@@ -177,8 +177,14 @@ class MeshtasticBot:
                 v.last_heard <= datetime.now().timestamp() - self.ONLINE_THRESHOLD}
 
     def reset_packets_today(self):
-        for node in self.nodes.values():
+        # sort nodes by packets_today, then print out any nodes with > 0 packets
+        print("Resetting packets_today counts...")
+        sorted_nodes = sorted(self.nodes.values(), key=lambda x: x.packets_today, reverse=True)
+        for node in sorted_nodes:
+            if node.packets_today > 0:
+                print(f"- {node.user.long_name}: {node.packets_today} packets")
             node.packets_today = 0
+
         self.packet_counter_reset_time = datetime.now()
         print(f"Reset all packets_today counts at {self.packet_counter_reset_time}")
 
