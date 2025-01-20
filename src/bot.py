@@ -19,16 +19,19 @@ class MeshtasticBot:
     init_complete: bool
     persistence: Optional[AbstractPersistence]
     packet_counter_reset_time: datetime
+    my_id: str
 
     ONLINE_THRESHOLD = 7200  # 2 hours
 
     def __init__(self, address: str):
-        self.admin_nodes = []
         self.address = address
+        self.interface = None
         self.nodes = {}
+        self.admin_nodes = []
         self.init_complete = False
         self.persistence = None
         self.packet_counter_reset_time = datetime.now()
+        self.my_id = None
 
     def connect(self):
         print(f"Connecting to Meshtastic node at {self.address}...")
@@ -46,6 +49,9 @@ class MeshtasticBot:
         self.init_complete = False
 
     def on_connection(self, interface, topic=pub.AUTO_TOPIC):
+        my_nodenum = interface.localNode.nodeNum  # in dec
+        self.my_id = f"!{hex(my_nodenum)[2:]}"
+
         self.init_complete = False
         print('Connected to Meshtastic node')
         self.print_nodes()
@@ -73,13 +79,35 @@ class MeshtasticBot:
 
     def on_receive(self, packet: MeshPacket, interface):
         sender = packet['fromId']
+        if sender not in self.nodes:
+            print(f"Received packet from unknown sender {sender}")
+            return
+
         node = self.nodes[sender]
 
         if node:
+
             # Update last_heard for this node
             node.last_heard = int(datetime.now().timestamp())
             # Increment packets_today for this node
             node.packets_today += 1
+
+            if 'decoded' in packet:
+                portnum = packet['decoded']['portnum']
+                # increment breakdown by portnum
+                if portnum in node.packet_breakdown_today:
+                    node.packet_breakdown_today[portnum] += 1
+                else:
+                    node.packet_breakdown_today[portnum] = 1
+            else:
+                print(f"Received packet from {node.user.long_name} with no decoded data")
+
+        if sender == self.my_id:
+            recipient = packet['toId']
+            rx_node = self.nodes[recipient] if recipient in self.nodes else None
+            portnum = packet['decoded']['portnum']
+
+            print(f"Received packet from self: {rx_node.user.long_name if rx_node else recipient} (port {portnum})")
 
     def on_node_updated(self, node, interface):
         # Check if the node is a new user
@@ -129,6 +157,7 @@ class MeshtasticBot:
         mesh_node.device_metrics = device_metrics
         mesh_node.is_favorite = data.get('isFavorite', False)
         mesh_node.packets_today = 0
+        mesh_node.packet_breakdown_today = {}
 
         return mesh_node
 
@@ -155,9 +184,11 @@ class MeshtasticBot:
         offline_nodes = self.get_offline_nodes()
 
         # print all nodes, sorted by last heard descending
-        print("Online nodes:")
+        print(f"Online nodes: ({len(online_nodes)})")
         sorted_nodes = sorted(online_nodes.values(), key=lambda x: x.last_heard, reverse=True)
         for node in sorted_nodes:
+            if node.user.id == self.my_id:
+                continue
             last_heard = MeshtasticBot.pretty_print_last_heard(node.last_heard)
             print(f"- {node.user.long_name} (last heard {last_heard})")
 

@@ -35,3 +35,4 @@ class MeshNode:
     device_metrics: Optional[DeviceMetrics]
     is_favorite: bool
     packets_today: int
+    packet_breakdown_today: dict[str, int]
