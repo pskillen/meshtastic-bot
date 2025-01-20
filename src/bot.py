@@ -1,7 +1,7 @@
 import logging
 import time
 from datetime import datetime, timezone
-from typing import Dict, Optional
+from typing import Dict
 
 import meshtastic.tcp_interface
 import schedule
@@ -10,7 +10,8 @@ from pubsub import pub
 
 from src.commands.factory import CommandFactory
 from src.data_classes import MeshNode, User, Position, DeviceMetrics
-from src.persistence.AbstractPersistence import AbstractPersistence
+from src.persistence.node_info import AbstractNodeInfoPersistence
+from src.persistence.state import AbstractStatePersistence, AppState
 
 
 class MeshtasticBot:
@@ -18,9 +19,11 @@ class MeshtasticBot:
     nodes: dict[str, MeshNode]
     admin_nodes: list[str]
     init_complete: bool
-    persistence: Optional[AbstractPersistence]
     packet_counter_reset_time: datetime
     my_id: str
+
+    node_persistence: AbstractNodeInfoPersistence | None
+    state_persistence: AbstractStatePersistence | None
 
     ONLINE_THRESHOLD = 7200  # 2 hours
 
@@ -30,9 +33,11 @@ class MeshtasticBot:
         self.nodes = {}
         self.admin_nodes = []
         self.init_complete = False
-        self.persistence = None
         self.packet_counter_reset_time = datetime.now()
         self.my_id = None
+
+        self.node_persistence = None
+        self.state_persistence = None
 
     def connect(self):
         logging.info(f"Connecting to Meshtastic node at {self.address}...")
@@ -46,8 +51,11 @@ class MeshtasticBot:
         logging.info("Connected. Listening for messages...")
 
     def disconnect(self):
-        self.interface.close()
         self.init_complete = False
+        try:
+            self.interface.close()
+        except OSError:
+            pass
 
     def on_connection(self, interface, topic=pub.AUTO_TOPIC):
         my_nodenum = interface.localNode.nodeNum  # in dec
@@ -87,7 +95,6 @@ class MeshtasticBot:
         node = self.nodes[sender]
 
         if node:
-
             # Update last_heard for this node
             node.last_heard = int(datetime.now().timestamp())
             # Increment packets_today for this node
@@ -116,9 +123,6 @@ class MeshtasticBot:
         if node['user'] is not None:
             mesh_node = self.parse_mesh_node(node)
             self.nodes[mesh_node.user.id] = mesh_node
-
-            if self.persistence:
-                self.persistence.store_node_id(mesh_node.num)
 
             if self.init_complete:
                 last_heard = MeshtasticBot.pretty_print_last_heard(mesh_node.last_heard)
@@ -227,4 +231,34 @@ class MeshtasticBot:
         schedule.every().day.at("00:00").do(self.reset_packets_today)
         while True:
             schedule.run_pending()
-            time.sleep(1)
+            try:
+                time.sleep(1)
+            except KeyboardInterrupt:
+                return
+
+    def persist_all_data(self):
+        if self.node_persistence:
+            node_list = list(self.nodes.values())
+            self.node_persistence.persist_node_info(node_list)
+            logging.info("Node data persisted")
+
+        if self.state_persistence:
+            state = AppState(
+                packet_counter_reset_time=self.packet_counter_reset_time
+            )
+            self.state_persistence.persist_state(state)
+            logging.info("State data persisted")
+
+    def load_persisted_data(self):
+        if self.state_persistence:
+            state = self.state_persistence.load_state()
+            if state:
+                self.packet_counter_reset_time = state.packet_counter_reset_time
+                logging.info("State data loaded")
+
+        if self.node_persistence:
+            node_list = self.node_persistence.load_node_info()
+            if node_list:
+                for node in node_list:
+                    self.nodes[node.user.id] = node
+                logging.info("Node data loaded")

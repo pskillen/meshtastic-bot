@@ -5,7 +5,8 @@ import sys
 from dotenv import load_dotenv
 
 from src.bot import MeshtasticBot
-from src.persistence.SqlitePersistence import SqlitePersistence
+from src.persistence.node_info import FileBasedNodeInfoPersistence
+from src.persistence.state import FileBasedStatePersistence
 
 # Load environment variables from .env file
 load_dotenv()
@@ -29,18 +30,19 @@ def main():
     # Connect to the Meshtastic node over WiFi
     bot = MeshtasticBot(MESHTASTIC_IP)
     bot.admin_nodes = ADMIN_NODES
+    bot.node_persistence = FileBasedNodeInfoPersistence('nodes.json')
+    bot.state_persistence = FileBasedStatePersistence('state.json')
 
     try:
-        bot.persistence = SqlitePersistence()
+        bot.load_persisted_data()
         bot.connect()
         bot.start_scheduler()
-        bot.disconnect()
 
     except Exception as e:
         logging.error(f"Error: {e}")
     finally:
-        if 'interface' in locals():
-            interface.close()
+        bot.disconnect()
+        bot.persist_all_data()
 
 
 if __name__ == "__main__":
