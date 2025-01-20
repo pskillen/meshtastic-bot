@@ -1,3 +1,5 @@
+import logging
+
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
 from src.bot import MeshtasticBot
@@ -31,5 +33,5 @@ class HelpCommand(AbstractCommand):
         self.respond(response, sender)
 
     def respond(self, message: str, destination_id: int) -> None:
-        print(f"Sending response: '{message}'")
+        logging.debug(f"Sending response: '{message}'")
         self.bot.interface.sendText(message, destinationId=destination_id)

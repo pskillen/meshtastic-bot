@@ -1,3 +1,5 @@
+import logging
+
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
 from src.bot import MeshtasticBot
@@ -33,14 +35,14 @@ class AdminCommand(AbstractCommand):
                 else:
                     response = f"Unknown command '{command_name}'"
 
-        print(f"Sending response: '{response}'")
+        logging.debug(f"Sending response: '{response}'")
         self.bot.interface.sendText(response, destinationId=sender)
 
     def reset_packets(self, args: list[str]):
         if args and len(args) > 0 and args[0] == 'packets':
             self.bot.reset_packets_today()
             return 'Packet counter reset'
-        
+
         return f"reset: Unknown argument '{args[0]}'" if len(args) > 0 else "reset: Missing argument"
 
     def show_help(self, args: list[str]):

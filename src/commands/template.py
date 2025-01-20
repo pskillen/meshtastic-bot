@@ -1,3 +1,5 @@
+import logging
+
 from jinja2 import Template
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
@@ -40,6 +42,6 @@ class TemplateCommand(AbstractCommand):
         context = {**local_context, **global_context}
         rendered_message = template.render(context)
 
-        print(f"Sending response: '{rendered_message}'")
+        logging.debug(f"Sending response: '{rendered_message}'")
 
         self.bot.interface.sendText(rendered_message, destinationId=sender_id)

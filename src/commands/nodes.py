@@ -1,3 +1,5 @@
+import logging
+
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
 from src.bot import MeshtasticBot
@@ -35,11 +37,11 @@ class NodesCommand(AbstractCommand):
                     self.send_detailed_nodeinfo(sender, node.user.id)
             else:
                 response = f"Unknown command: !nodes busy '{args}' - valid args are 'detailed'"
-                print(f"Sending response: '{response}'")
+                logging.debug(f"Sending response: '{response}'")
                 self.bot.interface.sendText(response, destinationId=sender)
         else:
             response = f"Unknown command: !nodes'{command}' - valid commands are 'busy (detailed)'"
-            print(f"Sending response: '{response}'")
+            logging.debug(f"Sending response: '{response}'")
             self.bot.interface.sendText(response, destinationId=sender)
 
     def send_online_node_list(self, sender: str):
@@ -56,7 +58,7 @@ class NodesCommand(AbstractCommand):
         for i, node in enumerate(sorted_nodes[:self.max_node_count_summary]):
             response += f"- {node.user.short_name} ({MeshtasticBot.pretty_print_last_heard(node.last_heard)})\n"
 
-        print(f"Sending response: '{response}'")
+        logging.debug(f"Sending response: '{response}'")
         self.bot.interface.sendText(response, destinationId=sender)
 
     def send_busy_node_list(self, sender: str):
@@ -76,7 +78,7 @@ class NodesCommand(AbstractCommand):
         # reset time
         response += f"(last reset at {self.bot.packet_counter_reset_time.strftime('%H:%M:%S')})"
 
-        print(f"Sending response: '{response}'")
+        logging.debug(f"Sending response: '{response}'")
         self.bot.interface.sendText(response, destinationId=sender)
 
     def send_detailed_nodeinfo(self, sender: str, node_id: str):
@@ -96,5 +98,5 @@ class NodesCommand(AbstractCommand):
         for packet_type, count in sorted_breakdown:
             response += f"- {packet_type}: {count}\n"
 
-        print(f"Sending response: '{response}'")
+        logging.debug(f"Sending response: '{response}'")
         self.bot.interface.sendText(response, destinationId=sender)
