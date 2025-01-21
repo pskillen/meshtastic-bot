@@ -223,6 +223,7 @@ class MeshtasticBot:
             if node.packets_today > 0:
                 logging.info(f"- {node.user.long_name}: {node.packets_today} packets")
             node.packets_today = 0
+            node.packet_breakdown_today = {}
 
         self.packet_counter_reset_time = datetime.now()
         logging.info(f"Reset all packets_today counts at {self.packet_counter_reset_time}")
@@ -262,3 +263,8 @@ class MeshtasticBot:
                 for node in node_list:
                     self.nodes[node.user.id] = node
                 logging.info("Node data loaded")
+
+        # if the packet counter _should_ have been reset, reset it now
+        if self.packet_counter_reset_time.date() != datetime.now().date():
+            logging.info(f"Need to reset stale packet counts from {self.packet_counter_reset_time}")
+            self.reset_packets_today()
