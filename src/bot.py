@@ -10,17 +10,21 @@ from pubsub import pub
 
 from src.commands.factory import CommandFactory
 from src.data_classes import MeshNode, User, Position, DeviceMetrics
+from src.loggers import UserCommandLogger
 from src.persistence.node_info import AbstractNodeInfoPersistence
 from src.persistence.state import AbstractStatePersistence, AppState
 
 
 class MeshtasticBot:
-    interface: meshtastic.tcp_interface.TCPInterface
-    nodes: dict[str, MeshNode]
     admin_nodes: list[str]
+
+    interface: meshtastic.tcp_interface.TCPInterface
     init_complete: bool
     packet_counter_reset_time: datetime
+
     my_id: str
+    nodes: dict[str, MeshNode]
+    command_logger: UserCommandLogger
 
     node_persistence: AbstractNodeInfoPersistence | None
     state_persistence: AbstractStatePersistence | None
@@ -29,12 +33,16 @@ class MeshtasticBot:
 
     def __init__(self, address: str):
         self.address = address
-        self.interface = None
-        self.nodes = {}
+
         self.admin_nodes = []
+
+        self.interface = None
         self.init_complete = False
         self.packet_counter_reset_time = datetime.now()
+
         self.my_id = None
+        self.nodes = {}
+        self.command_logger = UserCommandLogger()
 
         self.node_persistence = None
         self.state_persistence = None
@@ -81,10 +89,13 @@ class MeshtasticBot:
         command_name = words[0]
         command_instance = CommandFactory.create_command(command_name, self)
         if command_instance:
+            self.command_logger.log_command(command_instance, sender, message)
             try:
                 command_instance.handle_packet(packet)
             except Exception as e:
                 logging.error(f"Error handling message: {e}")
+        else:
+            self.command_logger.log_unknown_request(sender, message)
 
     def on_receive(self, packet: MeshPacket, interface):
         sender = packet['fromId']
@@ -245,7 +256,9 @@ class MeshtasticBot:
 
         if self.state_persistence:
             state = AppState(
-                packet_counter_reset_time=self.packet_counter_reset_time
+                packet_counter_reset_time=self.packet_counter_reset_time,
+                command_stats=self.command_logger.command_stats,
+                unknown_command_stats=self.command_logger.unknown_command_stats,
             )
             self.state_persistence.persist_state(state)
             logging.info("State data persisted")
@@ -254,7 +267,9 @@ class MeshtasticBot:
         if self.state_persistence:
             state = self.state_persistence.load_state()
             if state:
-                self.packet_counter_reset_time = state.packet_counter_reset_time
+                self.packet_counter_reset_time = state.packet_counter_reset_time or datetime.now()
+                self.command_logger.command_stats = state.command_stats or {}
+                self.command_logger.unknown_command_stats = state.unknown_command_stats or {}
                 logging.info("State data loaded")
 
         if self.node_persistence:
