@@ -1,0 +1,6 @@
+*.log
+__pycache__/
+*.pyc
+venv/
+.git/
+src/*.json

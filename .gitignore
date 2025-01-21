@@ -1,6 +1,10 @@
 ### IDE files
 *.iml
 
+### app outputs
+state.json
+nodes.json
+
 ### Python template
 # Byte-compiled / optimized / DLL files
 __pycache__/

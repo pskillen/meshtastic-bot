@@ -1,3 +1,5 @@
+import logging
+
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
 from src.bot import MeshtasticBot
@@ -16,11 +18,13 @@ class HelpCommand(AbstractCommand):
         additional = message[5:].strip().lstrip('!')
 
         if not additional:
-            response = "Valid commands are: !ping, !hello, !help"
+            response = "Valid commands are: !ping, !hello, !help, !nodes"
         elif additional == "hello":
             response = "!hello - Responds with a greeting"
         elif additional == "ping":
             response = "!ping (+ optional correlation message) - Responds with a pong"
+        elif additional == "nodes":
+            response = "!nodes - Responds with details about the nodes this device has seen"
         elif additional == "help":
             response = "!help - Shows this help message"
         else:
@@ -29,5 +33,5 @@ class HelpCommand(AbstractCommand):
         self.respond(response, sender)
 
     def respond(self, message: str, destination_id: int) -> None:
-        print(f"Sending response: '{message}'")
+        logging.debug(f"Sending response: '{message}'")
         self.bot.interface.sendText(message, destinationId=destination_id)

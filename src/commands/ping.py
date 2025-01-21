@@ -1,3 +1,5 @@
+import logging
+
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
 from src.bot import MeshtasticBot
@@ -11,6 +13,7 @@ class PingCommand(AbstractCommand):
     def handle_packet(self, packet: MeshPacket) -> None:
         message = packet['decoded']['text']
         sender = packet['fromId']
+        hops_away = packet['hopStart'] - packet['hopLimit']
 
         # trim off the '!ping' command from the message
         additional = message[5:].strip()
@@ -19,6 +22,8 @@ class PingCommand(AbstractCommand):
         if additional:
             response = f"!pong: {additional}"
 
-        print(f"Sending response: '{response}'")
+        response += f" (ping took {hops_away} hops)"
+
+        logging.debug(f"Sending response: '{response}'")
 
         self.bot.interface.sendText(response, destinationId=sender)
