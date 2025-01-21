@@ -47,13 +47,35 @@ class AdminCommand(AbstractCommand):
         return f"reset: Unknown argument '{args[0]}'" if len(args) > 0 else "reset: Missing argument"
 
     def show_users(self, args: list[str]):
+        # respond to '!admin users <user>' to show user history
+        if len(args) > 0:
+            req_user_name = args[0]
+            req_user = self.bot.get_node_by_short_name(req_user_name)
+
+            if not req_user:
+                return f"User '{req_user_name}' not found"
+
+            known_requests = self.bot.command_logger.command_stats.get(req_user.user.id)
+            unknown_requests = self.bot.command_logger.unknown_command_stats.get(req_user.user.id)
+
+            known_count = sum(known_requests.values()) if known_requests else 0
+            unknown_count = unknown_requests if unknown_requests else 0
+            unknown_string = f" and {unknown_count} unknown" if unknown_count > 0 else ""
+
+            response = f"{req_user.user.long_name} made {known_count} requests{unknown_string}\n"
+            for command, count in known_requests.items():
+                response += f"- {command}: {count}\n"
+
+            if unknown_count > 0:
+                for command, count in unknown_requests.items():
+                    response += f"- {command}: {count}\n"
+
+            return response
+
+        # otherwise, respond to '!admin users' with a list of all users
         user_ids_valid = self.bot.command_logger.command_stats.keys()
         user_ids_invalid = self.bot.command_logger.unknown_command_stats.keys()
         user_ids = set(user_ids_valid).union(user_ids_invalid)
-
-        # TODO: add '!admin users <user>' to show user history
-        if len(args) > 0:
-            return "Not implemented yet"
 
         response = f"Users: {len(user_ids)}\n"
         for user_id in user_ids:

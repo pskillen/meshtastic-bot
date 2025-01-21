@@ -283,3 +283,9 @@ class MeshtasticBot:
         if self.packet_counter_reset_time.date() != datetime.now().date():
             logging.info(f"Need to reset stale packet counts from {self.packet_counter_reset_time}")
             self.reset_packets_today()
+
+    def get_node_by_short_name(self, short_name: str) -> MeshNode | None:
+        for node in self.nodes.values():
+            if node.user.short_name.lower() == short_name.lower():
+                return node
+        return None
