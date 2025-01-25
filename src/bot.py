@@ -81,7 +81,7 @@ class MeshtasticBot:
         sender = packet['fromId']
         to_id = packet['toId']
 
-        if to_id == '^all':
+        if to_id != self.my_id:
             return
 
         logging.info(f"Received message: '{message}' from {sender}")
