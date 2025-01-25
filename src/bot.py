@@ -13,6 +13,7 @@ from src.data_classes import MeshNode, User, Position, DeviceMetrics
 from src.loggers import UserCommandLogger
 from src.persistence.node_info import AbstractNodeInfoPersistence
 from src.persistence.state import AbstractStatePersistence, AppState
+from src.tcp_interface import AutoReconnectTcpInterface
 
 
 class MeshtasticBot:
@@ -54,7 +55,7 @@ class MeshtasticBot:
         pub.subscribe(self.on_receive_text, "meshtastic.receive.text")
         pub.subscribe(self.on_node_updated, "meshtastic.node.updated")
         pub.subscribe(self.on_connection, "meshtastic.connection.established")
-        self.interface = meshtastic.tcp_interface.TCPInterface(hostname=self.address)
+        self.interface = AutoReconnectTcpInterface(hostname=self.address)
 
         logging.info("Connected. Listening for messages...")
 
