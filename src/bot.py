@@ -133,51 +133,12 @@ class MeshtasticBot:
     def on_node_updated(self, node, interface):
         # Check if the node is a new user
         if node['user'] is not None:
-            mesh_node = self.parse_mesh_node(node)
-            self.nodes[mesh_node.user.id] = mesh_node
+            mesh_node = MeshNode.from_dict(node)
+            self.nodes.add_node(mesh_node)
 
             if self.init_complete:
                 last_heard = MeshtasticBot.pretty_print_last_heard(mesh_node.last_heard)
                 logging.info(f"New user: {mesh_node.user.long_name} (last heard {last_heard})")
-
-    @staticmethod
-    def parse_mesh_node(data: Dict) -> MeshNode:
-        user_data = data.get('user', {})
-        user = User()
-        user.id = user_data.get('id', '')
-        user.long_name = user_data.get('longName', '')
-        user.short_name = user_data.get('shortName', '')
-        user.macaddr = user_data.get('macaddr', '')
-        user.hw_model = user_data.get('hwModel', '')
-        user.public_key = user_data.get('publicKey', '')
-
-        position_data = data.get('position', {})
-        position = Position()
-        position.latitude = position_data.get('latitude', 0.0)
-        position.longitude = position_data.get('longitude', 0.0)
-        position.altitude = position_data.get('altitude', 0)
-        position.time = position_data.get('time', 0)
-        position.location_source = position_data.get('locationSource', '')
-
-        device_metrics_data = data.get('deviceMetrics', {})
-        device_metrics = DeviceMetrics()
-        device_metrics.battery_level = device_metrics_data.get('batteryLevel', 0)
-        device_metrics.voltage = device_metrics_data.get('voltage', 0.0)
-        device_metrics.channel_utilization = device_metrics_data.get('channelUtilization', 0.0)
-        device_metrics.air_util_tx = device_metrics_data.get('airUtilTx', 0.0)
-        device_metrics.uptime_seconds = device_metrics_data.get('uptimeSeconds', 0)
-
-        mesh_node = MeshNode()
-        mesh_node.num = data.get('num', 0)
-        mesh_node.user = user
-        mesh_node.position = position
-        mesh_node.last_heard = data.get('lastHeard', 0)
-        mesh_node.device_metrics = device_metrics
-        mesh_node.is_favorite = data.get('isFavorite', False)
-        mesh_node.packets_today = 0
-        mesh_node.packet_breakdown_today = {}
-
-        return mesh_node
 
     @staticmethod
     def pretty_print_last_heard(last_heard_timestamp: int) -> str:
