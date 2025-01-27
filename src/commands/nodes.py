@@ -13,6 +13,11 @@ class NodesCommand(AbstractCommand):
     def __init__(self, bot: MeshtasticBot):
         self.bot = bot
 
+    def get_busy_nodes(self):
+        return sorted(self.bot.nodes.list(),
+                      key=lambda n:
+                      self.bot.nodes.node_packets_today.get(n.user.id, 0), reverse=True)
+
     def handle_packet(self, packet: MeshPacket) -> None:
         sender = packet['fromId']
         message = packet['decoded']['text']
@@ -31,8 +36,7 @@ class NodesCommand(AbstractCommand):
             if len(args) == 0:
                 self.send_busy_node_list(sender)
             elif args[0] == 'detailed':
-                nodes = self.bot.nodes
-                busy_nodes = sorted(nodes.values(), key=lambda n: n.packets_today, reverse=True)
+                busy_nodes = self.get_busy_nodes()
                 for i, node in enumerate(busy_nodes[:self.max_node_count_detailed]):
                     self.send_detailed_nodeinfo(sender, node.user.id)
             else:
@@ -45,12 +49,12 @@ class NodesCommand(AbstractCommand):
             self.bot.interface.sendText(response, destinationId=sender)
 
     def send_online_node_list(self, sender: str):
-        nodes = self.bot.nodes
-        online_nodes = self.bot.get_online_nodes()
-        offline_nodes = self.bot.get_offline_nodes()
+        nodes = self.bot.nodes.list()
+        online_nodes = self.bot.nodes.get_online_nodes()
+        offline_nodes = self.bot.nodes.get_offline_nodes()
 
         # get nodes sorted by last_head
-        sorted_nodes = sorted(nodes.values(), key=lambda n: n.last_heard, reverse=True)
+        sorted_nodes = sorted(nodes, key=lambda n: n.last_heard, reverse=True)
         response = f"{len(online_nodes)} nodes online, {len(offline_nodes)} offline."
 
         # Add up to 10 nodes with the most packets received today
@@ -62,39 +66,40 @@ class NodesCommand(AbstractCommand):
         self.bot.interface.sendText(response, destinationId=sender)
 
     def send_busy_node_list(self, sender: str):
-        nodes = self.bot.nodes
-        online_nodes = self.bot.get_online_nodes()
-        offline_nodes = self.bot.get_offline_nodes()
+        online_nodes = self.bot.nodes.get_online_nodes()
 
         # get nodes sorted by number of packets received
-        busy_nodes = sorted(nodes.values(), key=lambda n: n.packets_today, reverse=True)
-        response = f"{len(online_nodes)} nodes online, {len(offline_nodes)} offline."
+        busy_nodes = self.get_busy_nodes()
+        response = f"{len(online_nodes)} nodes online."
 
         # Add up to 10 nodes with the most packets received today
         response += "\nBusy nodes:\n"
         for i, node in enumerate(busy_nodes[:self.max_node_count_summary]):
-            response += f"- {node.user.short_name} ({node.packets_today} pkts)\n"
+            packets_today = self.bot.nodes.node_packets_today.get(node.user.id, 0)
+            response += f"- {node.user.short_name} ({packets_today} pkts)\n"
 
         # reset time
-        response += f"(last reset at {self.bot.packet_counter_reset_time.strftime('%H:%M:%S')})"
+        response += f"(last reset at {self.bot.nodes.packet_counter_reset_time.strftime('%H:%M:%S')})"
 
         logging.debug(f"Sending response: '{response}'")
         self.bot.interface.sendText(response, destinationId=sender)
 
     def send_detailed_nodeinfo(self, sender: str, node_id: str):
-        nodes = self.bot.nodes
-        node = nodes.get(node_id)
+        node = self.bot.nodes.get_by_id(node_id)
 
         if not node:
             return
 
+        packets_today = self.bot.nodes.node_packets_today.get(node.user.id, 0)
+        packet_breakdown_today = self.bot.nodes.node_packets_today_breakdown.get(node.user.id, {})
+
         # summarise the node user and packet metrics
         response = f"{node.user.long_name} ({node.user.short_name})\n"
         response += f"Last heard: {MeshtasticBot.pretty_print_last_heard(node.last_heard)}\n"
-        response += f"Pkts today: {node.packets_today}\n"
+        response += f"Pkts today: {packets_today}\n"
 
         # sort packets breakdown by count descending
-        sorted_breakdown = sorted(node.packet_breakdown_today.items(), key=lambda x: x[1], reverse=True)
+        sorted_breakdown = sorted(packet_breakdown_today.items(), key=lambda x: x[1], reverse=True)
         for packet_type, count in sorted_breakdown:
             response += f"- {packet_type}: {count}\n"
 

@@ -38,3 +38,13 @@ class UserCommandLogger:
             sender_stats[command_name] += 1
         else:
             sender_stats[command_name] = 1
+
+    def to_dict(self):
+        return {
+            'command_stats': self.command_stats,
+            'unknown_command_stats': self.unknown_command_stats
+        }
+
+    def from_dict(self, data: dict):
+        self.command_stats = data.get('command_stats', {})
+        self.unknown_command_stats = data.get('unknown_command_stats', {})

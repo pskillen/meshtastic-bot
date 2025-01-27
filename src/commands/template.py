@@ -25,17 +25,19 @@ class TemplateCommand(AbstractCommand):
         if not message.startswith(f"!{self.keyword}"):
             return
 
+        sender = self.bot.nodes.get_by_id(sender_id)
+
         # Render the template with the context variables
         template = Template(self.template)
         local_context = {
             'rx_message': message.strip(),
             'keyword': f"!{self.keyword}",
             'args': message[len(self.keyword) + 1:].strip(),
-            'sender': self.bot.nodes[sender_id],
+            'sender': sender,
             'sender_id': sender_id,
-            'sender_name': self.bot.nodes[sender_id].user.long_name,
-            'sender_long_name': self.bot.nodes[sender_id].user.long_name,
-            'sender_short_name': self.bot.nodes[sender_id].user.short_name,
+            'sender_name': sender.user.long_name,
+            'sender_long_name': sender.user.long_name,
+            'sender_short_name': sender.user.short_name,
             'hops_away': hops_away,
         }
         global_context = self.bot.get_global_context()
