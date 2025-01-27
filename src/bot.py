@@ -13,6 +13,7 @@ from src.data_classes import MeshNode, User, Position, DeviceMetrics
 from src.loggers import UserCommandLogger
 from src.persistence.node_info import AbstractNodeInfoPersistence
 from src.persistence.state import AbstractStatePersistence, AppState
+from src.tcp_interface import AutoReconnectTcpInterface
 
 
 class MeshtasticBot:
@@ -54,7 +55,7 @@ class MeshtasticBot:
         pub.subscribe(self.on_receive_text, "meshtastic.receive.text")
         pub.subscribe(self.on_node_updated, "meshtastic.node.updated")
         pub.subscribe(self.on_connection, "meshtastic.connection.established")
-        self.interface = meshtastic.tcp_interface.TCPInterface(hostname=self.address)
+        self.interface = AutoReconnectTcpInterface(hostname=self.address)
 
         logging.info("Connected. Listening for messages...")
 
@@ -80,7 +81,7 @@ class MeshtasticBot:
         sender = packet['fromId']
         to_id = packet['toId']
 
-        if to_id == '^all':
+        if to_id != self.my_id:
             return
 
         logging.info(f"Received message: '{message}' from {sender}")
@@ -283,3 +284,9 @@ class MeshtasticBot:
         if self.packet_counter_reset_time.date() != datetime.now().date():
             logging.info(f"Need to reset stale packet counts from {self.packet_counter_reset_time}")
             self.reset_packets_today()
+
+    def get_node_by_short_name(self, short_name: str) -> MeshNode | None:
+        for node in self.nodes.values():
+            if node.user.short_name.lower() == short_name.lower():
+                return node
+        return None
