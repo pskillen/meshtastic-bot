@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 
@@ -105,3 +106,36 @@ class MeshNode:
         node.packet_breakdown_today = node_data.get('packetBreakdownToday', {})
 
         return node
+
+class NodeInfoCollection:
+    DEFAULT_ONLINE_THRESHOLD = 7200  # 2 hours
+
+    nodes: dict[str, MeshNode]
+    online_threshold_sec: int
+
+    def __init__(self):
+        self.nodes = {}
+        self.online_threshold_sec = NodeInfoCollection.DEFAULT_ONLINE_THRESHOLD
+
+    def add_node(self, node: MeshNode):
+        self.nodes[node.user.id] = node
+
+    def get_by_id(self, node_id: str) -> MeshNode | None:
+        return self.nodes.get(node_id)
+
+    def get_by_short_name(self, short_name: str) -> MeshNode | None:
+        for node in self.nodes.values():
+            if node.user.short_name.lower() == short_name.lower():
+                return node
+        return None
+
+    def get_online_nodes(self):
+        return {k: v for k, v in self.nodes.items() if
+                v.last_heard > datetime.now().timestamp() - self.online_threshold_sec}
+
+    def get_offline_nodes(self):
+        return {k: v for k, v in self.nodes.items() if
+                v.last_heard <= datetime.now().timestamp() - self.online_threshold_sec}
+
+    def list(self) -> list[MeshNode]:
+        return list(self.nodes.values())

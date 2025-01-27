@@ -20,7 +20,7 @@ class AdminCommand(AbstractCommand):
         sender = packet['fromId']
 
         if sender not in self.bot.admin_nodes:
-            node = self.bot.nodes.get(sender)
+            node = self.bot.nodes.get_by_id(sender)
             response = f"Sorry {node.user.long_name}, you are not authorized to use this command"
         else:
             words = message.split()
@@ -79,7 +79,7 @@ class AdminCommand(AbstractCommand):
 
         response = f"Users: {len(user_ids)}\n"
         for user_id in user_ids:
-            node = self.bot.nodes.get(user_id)
+            node = self.bot.nodes.get_by_id(user_id)
             user_name = node.user.short_name if node else f"Unknown user {user_id}"
 
             known_requests = self.bot.command_logger.command_stats.get(user_id)

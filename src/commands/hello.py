@@ -11,10 +11,11 @@ class HelloCommand(AbstractCommand):
         self.bot = bot
 
     def handle_packet(self, packet: MeshPacket) -> None:
-        sender = packet['fromId']
-        sender_name = self.bot.nodes[sender].user.long_name
+        sender_id = packet['fromId']
+        sender = self.bot.nodes.get_by_id(sender_id)
+        sender_name = sender.user.long_name if sender else sender_id
 
         response = f"Hello, {sender_name}! How can I help you? (tip: try !help)"
         logging.debug(f"Sending response: '{response}'")
 
-        self.bot.interface.sendText(response, destinationId=sender)
+        self.bot.interface.sendText(response, destinationId=sender_id)

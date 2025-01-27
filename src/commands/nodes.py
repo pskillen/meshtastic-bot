@@ -31,8 +31,8 @@ class NodesCommand(AbstractCommand):
             if len(args) == 0:
                 self.send_busy_node_list(sender)
             elif args[0] == 'detailed':
-                nodes = self.bot.nodes
-                busy_nodes = sorted(nodes.values(), key=lambda n: n.packets_today, reverse=True)
+                nodes = self.bot.nodes.list()
+                busy_nodes = sorted(nodes, key=lambda n: n.packets_today, reverse=True)
                 for i, node in enumerate(busy_nodes[:self.max_node_count_detailed]):
                     self.send_detailed_nodeinfo(sender, node.user.id)
             else:
@@ -45,12 +45,12 @@ class NodesCommand(AbstractCommand):
             self.bot.interface.sendText(response, destinationId=sender)
 
     def send_online_node_list(self, sender: str):
-        nodes = self.bot.nodes
-        online_nodes = self.bot.get_online_nodes()
-        offline_nodes = self.bot.get_offline_nodes()
+        nodes = self.bot.nodes.list()
+        online_nodes = self.bot.nodes.get_online_nodes()
+        offline_nodes = self.bot.nodes.get_offline_nodes()
 
         # get nodes sorted by last_head
-        sorted_nodes = sorted(nodes.values(), key=lambda n: n.last_heard, reverse=True)
+        sorted_nodes = sorted(nodes, key=lambda n: n.last_heard, reverse=True)
         response = f"{len(online_nodes)} nodes online, {len(offline_nodes)} offline."
 
         # Add up to 10 nodes with the most packets received today
@@ -62,12 +62,12 @@ class NodesCommand(AbstractCommand):
         self.bot.interface.sendText(response, destinationId=sender)
 
     def send_busy_node_list(self, sender: str):
-        nodes = self.bot.nodes
-        online_nodes = self.bot.get_online_nodes()
-        offline_nodes = self.bot.get_offline_nodes()
+        nodes = self.bot.nodes.list()
+        online_nodes = self.bot.nodes.get_online_nodes()
+        offline_nodes = self.bot.nodes.get_offline_nodes()
 
         # get nodes sorted by number of packets received
-        busy_nodes = sorted(nodes.values(), key=lambda n: n.packets_today, reverse=True)
+        busy_nodes = sorted(nodes, key=lambda n: n.packets_today, reverse=True)
         response = f"{len(online_nodes)} nodes online, {len(offline_nodes)} offline."
 
         # Add up to 10 nodes with the most packets received today
@@ -82,8 +82,7 @@ class NodesCommand(AbstractCommand):
         self.bot.interface.sendText(response, destinationId=sender)
 
     def send_detailed_nodeinfo(self, sender: str, node_id: str):
-        nodes = self.bot.nodes
-        node = nodes.get(node_id)
+        node = self.bot.nodes.get_by_id(node_id)
 
         if not node:
             return
