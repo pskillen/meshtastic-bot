@@ -41,7 +41,7 @@ class AdminCommand(AbstractCommand):
 
     def reset_packets(self, args: list[str]):
         if args and len(args) > 0 and args[0] == 'packets':
-            self.bot.reset_packets_today()
+            self.bot.nodes.reset_packets_today()
             return 'Packet counter reset'
 
         return f"reset: Unknown argument '{args[0]}'" if len(args) > 0 else "reset: Missing argument"

@@ -10,8 +10,6 @@ from pubsub import pub
 from src.commands.factory import CommandFactory
 from src.data_classes import MeshNode, NodeInfoCollection
 from src.loggers import UserCommandLogger
-from src.persistence.node_info import AbstractNodeInfoPersistence
-from src.persistence.state import AbstractStatePersistence, AppState
 from src.tcp_interface import AutoReconnectTcpInterface
 
 
@@ -20,14 +18,10 @@ class MeshtasticBot:
 
     interface: meshtastic.tcp_interface.TCPInterface
     init_complete: bool
-    packet_counter_reset_time: datetime
 
     my_id: str
     nodes: NodeInfoCollection
     command_logger: UserCommandLogger
-
-    node_persistence: AbstractNodeInfoPersistence | None
-    state_persistence: AbstractStatePersistence | None
 
     def __init__(self, address: str):
         self.address = address
@@ -36,14 +30,10 @@ class MeshtasticBot:
 
         self.interface = None
         self.init_complete = False
-        self.packet_counter_reset_time = datetime.now()
 
         self.my_id = None
         self.nodes = NodeInfoCollection()
         self.command_logger = UserCommandLogger()
-
-        self.node_persistence = None
-        self.state_persistence = None
 
     def connect(self):
         logging.info(f"Connecting to Meshtastic node at {self.address}...")
@@ -107,17 +97,8 @@ class MeshtasticBot:
             # Update last_heard for this node
             node.last_heard = int(datetime.now().timestamp())
             # Increment packets_today for this node
-            node.packets_today += 1
-
-            if 'decoded' in packet:
-                portnum = packet['decoded']['portnum']
-                # increment breakdown by portnum
-                if portnum in node.packet_breakdown_today:
-                    node.packet_breakdown_today[portnum] += 1
-                else:
-                    node.packet_breakdown_today[portnum] = 1
-            else:
-                logging.warning(f"Received packet from {node.user.long_name} with no decoded data")
+            portnum = packet['decoded']['portnum'] if 'decoded' in packet else 'unknown'
+            self.nodes.increment_packets_today(node.user.id, portnum)
 
         if sender == self.my_id:
             recipient_id = packet['toId']
@@ -177,63 +158,14 @@ class MeshtasticBot:
             'offline_nodes': self.nodes.get_offline_nodes(),
         }
 
-    def reset_packets_today(self):
-        # sort nodes by packets_today, then print out any nodes with > 0 packets
-        logging.info("Resetting packets_today counts...")
-        sorted_nodes = sorted(self.nodes.list(), key=lambda x: x.packets_today, reverse=True)
-        for node in sorted_nodes:
-            if node.packets_today > 0:
-                logging.info(f"- {node.user.long_name}: {node.packets_today} packets")
-            node.packets_today = 0
-            node.packet_breakdown_today = {}
-
-        self.packet_counter_reset_time = datetime.now()
-        logging.info(f"Reset all packets_today counts at {self.packet_counter_reset_time}")
-
     def start_scheduler(self):
-        schedule.every().day.at("00:00").do(self.reset_packets_today)
+        schedule.every().day.at("00:00").do(self.nodes.reset_packets_today)
         while True:
             schedule.run_pending()
             try:
                 time.sleep(1)
             except KeyboardInterrupt:
                 return
-
-    def persist_all_data(self):
-        if self.node_persistence:
-            node_list = list(self.nodes.list())
-            self.node_persistence.persist_node_info(node_list)
-            logging.info("Node data persisted")
-
-        if self.state_persistence:
-            state = AppState(
-                packet_counter_reset_time=self.packet_counter_reset_time,
-                command_stats=self.command_logger.command_stats,
-                unknown_command_stats=self.command_logger.unknown_command_stats,
-            )
-            self.state_persistence.persist_state(state)
-            logging.info("State data persisted")
-
-    def load_persisted_data(self):
-        if self.state_persistence:
-            state = self.state_persistence.load_state()
-            if state:
-                self.packet_counter_reset_time = state.packet_counter_reset_time or datetime.now()
-                self.command_logger.command_stats = state.command_stats or {}
-                self.command_logger.unknown_command_stats = state.unknown_command_stats or {}
-                logging.info("State data loaded")
-
-        if self.node_persistence:
-            node_list = self.node_persistence.load_node_info()
-            if node_list:
-                for node in node_list:
-                    self.nodes.add_node(node)
-                logging.info("Node data loaded")
-
-        # if the packet counter _should_ have been reset, reset it now
-        if self.packet_counter_reset_time.date() != datetime.now().date():
-            logging.info(f"Need to reset stale packet counts from {self.packet_counter_reset_time}")
-            self.reset_packets_today()
 
     def get_node_by_short_name(self, short_name: str) -> MeshNode | None:
         for node in self.nodes.list():

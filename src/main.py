@@ -5,7 +5,6 @@ import sys
 from dotenv import load_dotenv
 
 from src.bot import MeshtasticBot
-from src.persistence.node_info import FileBasedNodeInfoPersistence
 from src.persistence.state import FileBasedStatePersistence
 
 # Load environment variables from .env file
@@ -27,14 +26,14 @@ logging.getLogger('mesh_interface').setLevel(logging.WARNING)
 
 
 def main():
+    persistence = FileBasedStatePersistence('all_state.json')
+
     # Connect to the Meshtastic node over WiFi
     bot = MeshtasticBot(MESHTASTIC_IP)
     bot.admin_nodes = ADMIN_NODES
-    bot.node_persistence = FileBasedNodeInfoPersistence('nodes.json')
-    bot.state_persistence = FileBasedStatePersistence('state.json')
 
     try:
-        bot.load_persisted_data()
+        persistence.load_state(bot)
         bot.connect()
         bot.start_scheduler()
 
@@ -42,7 +41,7 @@ def main():
         logging.error(f"Error: {e}")
     finally:
         bot.disconnect()
-        bot.persist_all_data()
+        persistence.persist_state(bot)
 
 
 if __name__ == "__main__":

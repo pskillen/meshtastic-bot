@@ -2,27 +2,28 @@ import abc
 import json
 import logging
 from abc import ABC
-from datetime import datetime
 
-
-class AppState:
-    packet_counter_reset_time: datetime
-
-    def __init__(self, packet_counter_reset_time: datetime,
-                 command_stats: dict,
-                 unknown_command_stats: dict):
-        self.packet_counter_reset_time = packet_counter_reset_time
-        self.command_stats = command_stats
-        self.unknown_command_stats = unknown_command_stats
+from src.bot import MeshtasticBot
 
 
 class AbstractStatePersistence(ABC):
+
+    def get_state(self, bot: MeshtasticBot) -> dict:
+        return {
+            'node_data': bot.nodes.to_dict(),
+            'command_data': bot.command_logger.to_dict(),
+        }
+
+    def import_state(self, bot: MeshtasticBot, data: dict):
+        bot.nodes.from_dict(data['node_data'])
+        bot.command_logger.from_dict(data['command_data'])
+
     @abc.abstractmethod
-    def persist_state(self, state: AppState):
+    def persist_state(self, bot: MeshtasticBot):
         pass
 
     @abc.abstractmethod
-    def load_state(self) -> AppState | None:
+    def load_state(self, bot: MeshtasticBot):
         pass
 
 
@@ -30,35 +31,22 @@ class FileBasedStatePersistence(AbstractStatePersistence):
     def __init__(self, file_path: str):
         self.file_path = file_path
 
-    def persist_state(self, state: AppState):
-        state_data = {
-            'packet_counter_reset_time': state.packet_counter_reset_time.isoformat(),
-            'command_stats': state.command_stats,
-            'unknown_command_stats': state.unknown_command_stats,
-        }
+    def persist_state(self, bot: MeshtasticBot):
         try:
             with open(self.file_path, 'w') as f:
-                json.dump(state_data, f)
+                json.dump(self.get_state(bot), f)
         except Exception:
             logging.error(f"Failed to persist state info", exc_info=True)
 
-    def load_state(self) -> AppState | None:
+    def load_state(self, bot: MeshtasticBot):
         try:
-            with open(self.file_path, 'r') as file:
-                state_data = json.load(file)
-
-            packet_counter_reset_time = datetime.fromisoformat(state_data['packet_counter_reset_time']) \
-                if 'packet_counter_reset_time' in state_data else datetime.now()
-            command_stats = state_data['command_stats'] \
-                if 'command_stats' in state_data else {}
-            unknown_command_stats = state_data['unknown_command_stats'] \
-                if 'unknown_command_stats' in state_data else {}
+            with open(self.file_path, 'r') as f:
+                data = json.load(f)
+                self.import_state(bot, data)
 
             logging.info(f"Successfully loaded state from {self.file_path}")
-            return AppState(packet_counter_reset_time, command_stats, unknown_command_stats)
         except FileNotFoundError:
             logging.warning(f"State file {self.file_path} not found")
-            return None
-        except Exception:
+        except Exception as e:
             logging.error(f"Failed to load state file {self.file_path}", exc_info=True)
-            return None
+            pass
