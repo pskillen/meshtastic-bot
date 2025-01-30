@@ -17,7 +17,7 @@ class TestFileBasedStatePersistence(unittest.TestCase):
 
         # Initialize UserCommandLogger with some data
         self.bot.command_logger = UserCommandLogger()
-        self.bot.command_logger.log_command(MagicMock(), 'user1', 'test_command')
+        self.bot.command_logger.log_command('user1', 'test_command')
         self.bot.command_logger.log_unknown_request('user1', 'unknown_command')
 
         # Initialize NodeInfoCollection with some data

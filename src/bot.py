@@ -77,8 +77,9 @@ class MeshtasticBot:
         words = message.split()
         command_name = words[0]
         command_instance = CommandFactory.create_command(command_name, self)
+        command_text = command_instance.get_command_for_logging(message)
         if command_instance:
-            self.command_logger.log_command(command_instance, from_id, message)
+            self.command_logger.log_command(from_id, command_text)
             try:
                 command_instance.handle_packet(packet)
             except Exception as e:
