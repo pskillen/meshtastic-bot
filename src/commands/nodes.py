@@ -1,54 +1,23 @@
-import logging
-
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
 from src.bot import MeshtasticBot
-from src.commands.command import AbstractCommand
+from src.commands.command import AbstractCommandWithSubcommands
 
 
-class NodesCommand(AbstractCommand):
+class NodesCommand(AbstractCommandWithSubcommands):
     max_node_count_summary = 6
     max_node_count_detailed = 4
 
     def __init__(self, bot: MeshtasticBot):
-        self.bot = bot
+        super().__init__(bot, 'nodes')
+        self.sub_commands['busy'] = self.handle_busy
 
     def get_busy_nodes(self):
         return sorted(self.bot.nodes.list(),
                       key=lambda n:
                       self.bot.nodes.node_packets_today.get(n.user.id, 0), reverse=True)
 
-    def handle_packet(self, packet: MeshPacket) -> None:
-        sender = packet['fromId']
-        message = packet['decoded']['text']
-        words = message.split()
-
-        # command format is "!nodes <command> <args"
-        if len(words) < 2:
-            # send the node summary
-            self.send_online_node_list(sender)
-            return
-
-        command = words[1]
-        args = words[2:] if len(words) > 2 else []
-
-        if command == 'busy':
-            if len(args) == 0:
-                self.send_busy_node_list(sender)
-            elif args[0] == 'detailed':
-                busy_nodes = self.get_busy_nodes()
-                for i, node in enumerate(busy_nodes[:self.max_node_count_detailed]):
-                    self.send_detailed_nodeinfo(sender, node.user.id)
-            else:
-                response = f"Unknown command: !nodes busy '{args}' - valid args are 'detailed'"
-                logging.debug(f"Sending response: '{response}'")
-                self.bot.interface.sendText(response, destinationId=sender)
-        else:
-            response = f"Unknown command: !nodes'{command}' - valid commands are 'busy (detailed)'"
-            logging.debug(f"Sending response: '{response}'")
-            self.bot.interface.sendText(response, destinationId=sender)
-
-    def send_online_node_list(self, sender: str):
+    def handle_base_command(self, packet: MeshPacket, args: list[str]) -> None:
         nodes = self.bot.nodes.list()
         online_nodes = self.bot.nodes.get_online_nodes()
         offline_nodes = self.bot.nodes.get_offline_nodes()
@@ -62,8 +31,20 @@ class NodesCommand(AbstractCommand):
         for i, node in enumerate(sorted_nodes[:self.max_node_count_summary]):
             response += f"- {node.user.short_name} ({MeshtasticBot.pretty_print_last_heard(node.last_heard)})\n"
 
-        logging.debug(f"Sending response: '{response}'")
-        self.bot.interface.sendText(response, destinationId=sender)
+        self.reply(packet, response)
+
+    def handle_busy(self, packet: MeshPacket, args: list[str]) -> None:
+        sender = packet['fromId']
+
+        if len(args) == 0:
+            self.send_busy_node_list(sender)
+        elif args[0] == 'detailed':
+            busy_nodes = self.get_busy_nodes()
+            for i, node in enumerate(busy_nodes[:self.max_node_count_detailed]):
+                self.send_detailed_nodeinfo(sender, node.user.id)
+        else:
+            response = f"Unknown command: !nodes busy '{args}' - valid args are 'detailed'"
+            self.reply(packet, response)
 
     def send_busy_node_list(self, sender: str):
         online_nodes = self.bot.nodes.get_online_nodes()
@@ -80,9 +61,7 @@ class NodesCommand(AbstractCommand):
 
         # reset time
         response += f"(last reset at {self.bot.nodes.packet_counter_reset_time.strftime('%H:%M:%S')})"
-
-        logging.debug(f"Sending response: '{response}'")
-        self.bot.interface.sendText(response, destinationId=sender)
+        self.reply_to(sender, response)
 
     def send_detailed_nodeinfo(self, sender: str, node_id: str):
         node = self.bot.nodes.get_by_id(node_id)
@@ -103,5 +82,10 @@ class NodesCommand(AbstractCommand):
         for packet_type, count in sorted_breakdown:
             response += f"- {packet_type}: {count}\n"
 
-        logging.debug(f"Sending response: '{response}'")
-        self.bot.interface.sendText(response, destinationId=sender)
+        self.reply_to(sender, response)
+
+    def show_help(self, packet: MeshPacket, args: list[str]) -> None:
+        help_text = "!nodes: details about nodes this device has seen\n"
+        help_text += "!nodes busy: summary of busiest nodes\n"
+        help_text += "!nodes busy detailed: detailed info about busiest nodes\n"
+        self.reply(packet, help_text)
