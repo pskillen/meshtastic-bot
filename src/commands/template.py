@@ -1,5 +1,3 @@
-import logging
-
 from jinja2 import Template
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
@@ -8,13 +6,10 @@ from src.commands.command import AbstractCommand
 
 
 class TemplateCommand(AbstractCommand):
-    bot: MeshtasticBot
-    keyword: str
     template: str
 
-    def __init__(self, bot: MeshtasticBot, keyword: str, template: str):
-        self.bot = bot
-        self.keyword = keyword
+    def __init__(self, bot: MeshtasticBot, base_command: str, template: str):
+        super().__init__(bot, base_command)
         self.template = template
 
     def handle_packet(self, packet: MeshPacket) -> None:
@@ -22,7 +17,7 @@ class TemplateCommand(AbstractCommand):
         sender_id = packet['fromId']
         hops_away = packet['hopStart'] - packet['hopLimit']
 
-        if not message.startswith(f"!{self.keyword}"):
+        if not message.startswith(f"!{self.base_command}"):
             return
 
         sender = self.bot.nodes.get_by_id(sender_id)
@@ -31,8 +26,8 @@ class TemplateCommand(AbstractCommand):
         template = Template(self.template)
         local_context = {
             'rx_message': message.strip(),
-            'keyword': f"!{self.keyword}",
-            'args': message[len(self.keyword) + 1:].strip(),
+            'base_command': f"!{self.base_command}",
+            'args': message[len(self.base_command) + 1:].strip(),
             'sender': sender,
             'sender_id': sender_id,
             'sender_name': sender.user.long_name,
@@ -44,6 +39,4 @@ class TemplateCommand(AbstractCommand):
         context = {**local_context, **global_context}
         rendered_message = template.render(context)
 
-        logging.debug(f"Sending response: '{rendered_message}'")
-
-        self.bot.interface.sendText(rendered_message, destinationId=sender_id)
+        self.reply_to(sender_id, rendered_message)
