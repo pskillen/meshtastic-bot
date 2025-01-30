@@ -1,0 +1,8 @@
+name: pull request
+
+on:
+  pull_request:
+
+jobs:
+  UnitTest:
+    uses: ./.github/workflows/unit-tests.yaml

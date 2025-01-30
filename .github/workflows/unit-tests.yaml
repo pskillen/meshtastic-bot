@@ -1,0 +1,46 @@
+name: test-all
+
+on:
+  workflow_call:
+
+
+permissions:
+  contents: read
+  checks: write # For unit test results
+  packages: read
+
+jobs:
+  runUnitTests:
+    name: Run unit tests
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: [ "3.9", "3.10", "3.11", "3.12", "3.13" ]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Test with pytest
+        run: |
+          pip install pytest pytest-cov
+          pytest test/ --doctest-modules --junitxml=reports/test-results-${{ matrix.python-version }}.xml
+
+      - name: Test Report
+        uses: dorny/test-reporter@v1
+        with:
+          name: pytest-results-${{ matrix.python-version }}
+          path: reports/test-results-${{ matrix.python-version }}.xml
+          reporter: java-junit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # Use always() to always run this step to publish test results when there are test failures
+        if: ${{ always() }}
