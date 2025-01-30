@@ -1,37 +1,32 @@
-import logging
-
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
 from src.bot import MeshtasticBot
-from src.commands.command import AbstractCommand
+from src.commands.command import AbstractCommandWithSubcommands
 
 
-class HelpCommand(AbstractCommand):
+class HelpCommand(AbstractCommandWithSubcommands):
     def __init__(self, bot: MeshtasticBot):
-        self.bot = bot
+        super().__init__(bot, 'help')
+        self.sub_commands['hello'] = self.handle_hello
+        self.sub_commands['ping'] = self.handle_ping
+        self.sub_commands['nodes'] = self.handle_nodes
 
-    def handle_packet(self, packet: MeshPacket) -> None:
-        message = packet['decoded']['text']
-        sender = packet['fromId']
+    def handle_base_command(self, packet: MeshPacket, args: list[str]) -> None:
+        response = "Valid commands are: !ping, !hello, !help, !nodes"
+        self.reply(packet, response)
 
-        # trim off the '!help' command from the message
-        additional = message[5:].strip().lstrip('!')
+    def handle_hello(self, packet: MeshPacket, args: list[str]) -> None:
+        response = "!hello: responds with a greeting"
+        self.reply(packet, response)
 
-        if not additional:
-            response = "Valid commands are: !ping, !hello, !help, !nodes"
-        elif additional == "hello":
-            response = "!hello - Responds with a greeting"
-        elif additional == "ping":
-            response = "!ping (+ optional correlation message) - Responds with a pong"
-        elif additional == "nodes":
-            response = "!nodes - Responds with details about the nodes this device has seen"
-        elif additional == "help":
-            response = "!help - Shows this help message"
-        else:
-            response = f"Unknown command: {additional}"
+    def handle_ping(self, packet: MeshPacket, args: list[str]) -> None:
+        response = "!ping (+ optional correlation message): responds with a pong"
+        self.reply(packet, response)
 
-        self.respond(response, sender)
+    def handle_nodes(self, packet: MeshPacket, args: list[str]) -> None:
+        response = "!nodes: details about the nodes this device has seen"
+        self.reply(packet, response)
 
-    def respond(self, message: str, destination_id: int) -> None:
-        logging.debug(f"Sending response: '{message}'")
-        self.bot.interface.sendText(message, destinationId=destination_id)
+    def show_help(self, packet: MeshPacket, args: list[str]) -> None:
+        response = "!help: show this help message"
+        self.reply(packet, response)

@@ -12,16 +12,24 @@ class TestPingCommand(unittest.TestCase):
         self.command = PingCommand(bot=self.bot)
 
     def test_handle_packet_no_additional_message(self):
-        packet = {'decoded': {'text': '!ping'}, 'fromId': 'test_sender'}
-        expected_response = "!pong"
+        packet = {'decoded': {'text': '!ping'}, 'fromId': 'test_sender', 'hopStart': 3, 'hopLimit': 3}
+        expected_response = "!pong (ping took 0 hops)"
 
         self.command.handle_packet(packet)
 
         self.bot.interface.sendText.assert_called_once_with(expected_response, destinationId='test_sender')
 
     def test_handle_packet_with_additional_message(self):
-        packet = {'decoded': {'text': '!ping extra message'}, 'fromId': 'test_sender'}
-        expected_response = "!pong: extra message"
+        packet = {'decoded': {'text': '!ping extra message'}, 'fromId': 'test_sender', 'hopStart': 3, 'hopLimit': 3}
+        expected_response = "!pong: extra message (ping took 0 hops)"
+
+        self.command.handle_packet(packet)
+
+        self.bot.interface.sendText.assert_called_once_with(expected_response, destinationId='test_sender')
+
+    def test_handle_packet_with_hop_count(self):
+        packet = {'decoded': {'text': '!ping'}, 'fromId': 'test_sender', 'hopStart': 3, 'hopLimit': 2}
+        expected_response = "!pong (ping took 1 hops)"
 
         self.command.handle_packet(packet)
 
