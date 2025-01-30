@@ -13,7 +13,7 @@ class TestHelpCommand(unittest.TestCase):
 
     def test_handle_packet_no_additional_message(self):
         packet = {'decoded': {'text': '!help'}, 'fromId': 'test_sender'}
-        expected_response = "Valid commands are: !ping, !hello, !help"
+        expected_response = "Valid commands are: !ping, !hello, !help, !nodes"
 
         self.command.handle_packet(packet)
 
@@ -21,7 +21,7 @@ class TestHelpCommand(unittest.TestCase):
 
     def test_handle_packet_hello_command(self):
         packet = {'decoded': {'text': '!help hello'}, 'fromId': 'test_sender'}
-        expected_response = "!hello - Responds with a greeting"
+        expected_response = "!hello: responds with a greeting"
 
         self.command.handle_packet(packet)
 
@@ -29,7 +29,7 @@ class TestHelpCommand(unittest.TestCase):
 
     def test_handle_packet_ping_command(self):
         packet = {'decoded': {'text': '!help ping'}, 'fromId': 'test_sender'}
-        expected_response = "!ping (+ optional correlation message) - Responds with a pong"
+        expected_response = "!ping (+ optional correlation message): responds with a pong"
 
         self.command.handle_packet(packet)
 
@@ -37,7 +37,7 @@ class TestHelpCommand(unittest.TestCase):
 
     def test_handle_packet_help_command(self):
         packet = {'decoded': {'text': '!help help'}, 'fromId': 'test_sender'}
-        expected_response = "!help - Shows this help message"
+        expected_response = "!help: show this help message"
 
         self.command.handle_packet(packet)
 
@@ -45,7 +45,7 @@ class TestHelpCommand(unittest.TestCase):
 
     def test_handle_packet_unknown_command(self):
         packet = {'decoded': {'text': '!help unknown'}, 'fromId': 'test_sender'}
-        expected_response = "Unknown command: unknown"
+        expected_response = "Unknown command 'unknown'"
 
         self.command.handle_packet(packet)
 
@@ -54,7 +54,7 @@ class TestHelpCommand(unittest.TestCase):
     def test_handle_packet_ping_with_and_without_exclamation(self):
         packet_with_exclamation = {'decoded': {'text': '!help !ping'}, 'fromId': 'test_sender'}
         packet_without_exclamation = {'decoded': {'text': '!help ping'}, 'fromId': 'test_sender'}
-        expected_response = "!ping (+ optional correlation message) - Responds with a pong"
+        expected_response = "!ping (+ optional correlation message): responds with a pong"
 
         self.command.handle_packet(packet_with_exclamation)
         self.bot.interface.sendText.assert_called_with(expected_response, destinationId='test_sender')
