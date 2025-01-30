@@ -97,10 +97,25 @@ class TestAdminCommand(unittest.TestCase):
 
     @patch('src.commands.admin.AdminCommand.reply')
     def test_show_help(self, mock_reply):
-        self.command.show_help(self.packet, [])
-        expected_help_text = 'Available commands:\nreset packets - Reset the packet counter\nusers (user) - Usage info or user history\nhelp - Show this help message\n'
-        mock_reply.assert_called_once_with(self.packet, expected_help_text)
+        packet = {'decoded': {'text': '!admin help'}, 'fromId': 'test_sender'}
+        self.command.handle_packet(packet)
 
+        response = mock_reply.call_args[0][0]
 
+        # summary line should be in the response
+        want = f"!{self.command.base_command}: "
+        self.assertIn(want, response)
+
+        # each sub_command in command should appear in the response
+        for sub_command in self.command.sub_commands:
+            # we can skip the '!cmd help' subcommand
+            if sub_command == 'help':
+                continue
+            # and the empty string subcommand
+            if sub_command == '':
+                continue
+
+            want = f"!{self.command.base_command} {sub_command}: "
+            self.assertIn(want, response)
 if __name__ == '__main__':
     unittest.main()
