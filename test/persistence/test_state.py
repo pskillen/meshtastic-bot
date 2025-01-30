@@ -75,15 +75,17 @@ class TestFileBasedStatePersistence(unittest.TestCase):
         self.assertIn('user1', persisted_data['command_data']['unknown_command_stats'])
         self.assertEqual(persisted_data['command_data']['unknown_command_stats']['user1']['unknown_command'], 1)
 
+    @patch.object(NodeInfoCollection, 'from_dict')
+    @patch.object(UserCommandLogger, 'from_dict')
     @patch('builtins.open', new_callable=mock_open, read_data='{"nodes": {}, "commands": {}}')
     @patch('json.load')
-    def test_load_state(self, mock_json_load, mock_file_open):
+    def test_load_state(self, mock_json_load, mock_file_open, mock_command_logger_from_dict, mock_nodes_from_dict):
         mock_json_load.return_value = {"node_data": {}, "command_data": {}}
         self.persistence.load_state(self.bot)
         mock_file_open.assert_called_once_with(self.file_path, 'r')
         mock_json_load.assert_called_once_with(mock_file_open())
-        self.bot.nodes.from_dict.assert_called_once_with({})
-        self.bot.command_logger.from_dict.assert_called_once_with({})
+        mock_nodes_from_dict.assert_called_once_with({})
+        mock_command_logger_from_dict.assert_called_once_with({})
 
     @patch('builtins.open', side_effect=FileNotFoundError)
     def test_load_state_file_not_found(self, mock_file_open):
