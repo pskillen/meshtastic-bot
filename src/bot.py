@@ -99,7 +99,11 @@ class MeshtasticBot:
             node.last_heard = int(datetime.now().timestamp())
             # Increment packets_today for this node
             portnum = packet['decoded']['portnum'] if 'decoded' in packet else 'unknown'
-            self.nodes.increment_packets_today(node.user.id, portnum)
+            if sender == self.my_id and portnum == 'TELEMETRY_APP':
+                # Ignore telemetry packets sent by self
+                pass
+            else:
+                self.nodes.increment_packets_today(node.user.id, portnum)
 
         if sender == self.my_id:
             recipient_id = packet['toId']
