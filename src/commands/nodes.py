@@ -43,8 +43,13 @@ class NodesCommand(AbstractCommandWithSubcommands):
             for i, node in enumerate(busy_nodes[:self.max_node_count_detailed]):
                 self.send_detailed_nodeinfo(sender, node.user.id)
         else:
-            response = f"Unknown command: !nodes busy '{args}' - valid args are 'detailed'"
-            self.reply(packet, response)
+            node = self.bot.nodes.get_by_short_name(args[0])
+
+            if not node:
+                response = f"Unknown command: !nodes busy '{args}' - valid args are 'detailed' or (node ID)"
+                return self.reply(packet, response)
+
+            self.send_detailed_nodeinfo(sender, node.user.id)
 
     def send_busy_node_list(self, sender: str):
         online_nodes = self.bot.nodes.get_online_nodes()
