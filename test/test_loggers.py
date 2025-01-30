@@ -21,7 +21,7 @@ class TestUserCommandLogger(unittest.TestCase):
     def setUp(self):
         self.bot = MagicMock(spec=MeshtasticBot)
         self.logger = UserCommandLogger()
-        self.command = MockCommand(self.bot)
+        self.command = MockCommand(self.bot, 'test_command')
 
     def test_log_command_new_sender(self):
         self.logger.log_command('user1', 'test_command')
