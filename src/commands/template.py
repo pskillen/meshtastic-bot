@@ -40,3 +40,10 @@ class TemplateCommand(AbstractCommand):
         rendered_message = template.render(context)
 
         self.reply_to(sender_id, rendered_message)
+
+
+class WhoAmI(TemplateCommand):
+    def __init__(self, bot: MeshtasticBot):
+        template = "Hi {{ sender_id }}. You are {{ sender_long_name }} [{{ sender_short_name }}]."
+        template += " You are {{ hops_away }} hops away from me."
+        super().__init__(bot, "whoami", template)
