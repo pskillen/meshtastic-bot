@@ -72,6 +72,19 @@ class TestNodesCommand(unittest.TestCase):
         self.command.handle_packet(packet)
 
         self.bot.interface.sendText.assert_called()
+        self.assertEqual(self.bot.interface.sendText.call_count, 2)
+
+    def test_handle_busy_specific_node(self):
+        packet = {'decoded': {'text': '!nodes busy node1'}, 'fromId': 'test_sender'}
+
+        self.command.handle_packet(packet)
+
+        expected_response = "Node 1 (Node1)\n"
+        expected_response += "Last heard: 5m ago\n"
+        expected_response += "Pkts today: 5\n"
+        expected_response += "- cmd2: 3\n"
+        expected_response += "- cmd1: 2\n"
+        self.bot.interface.sendText.assert_called_once_with(expected_response, destinationId='test_sender')
 
     def test_show_help(self):
         packet = {'decoded': {'text': '!nodes help'}, 'fromId': 'test_sender'}

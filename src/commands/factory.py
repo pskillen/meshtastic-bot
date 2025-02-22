@@ -19,6 +19,10 @@ class CommandFactory:
             "class": "src.commands.nodes.NodesCommand",
             "args": []
         },
+        "!whoami": {
+            "class": "src.commands.template.WhoAmI",
+            "args": []
+        },
         "!admin": {
             "class": "src.commands.admin.AdminCommand",
             "args": []

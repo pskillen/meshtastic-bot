@@ -12,7 +12,7 @@ class HelpCommand(AbstractCommandWithSubcommands):
         self.sub_commands['nodes'] = self.handle_nodes
 
     def handle_base_command(self, packet: MeshPacket, args: list[str]) -> None:
-        response = "Valid commands are: !ping, !hello, !help, !nodes"
+        response = "Valid commands are: !ping, !hello, !help, !nodes, !whoami, !admin"
         self.reply(packet, response)
 
     def handle_hello(self, packet: MeshPacket, args: list[str]) -> None:

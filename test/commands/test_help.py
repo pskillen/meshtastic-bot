@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import MagicMock
 
 from src.bot import MeshtasticBot
+from src.commands.factory import CommandFactory
 from src.commands.help import HelpCommand
 
 
@@ -13,11 +14,14 @@ class TestHelpCommand(unittest.TestCase):
 
     def test_handle_packet_no_additional_message(self):
         packet = {'decoded': {'text': '!help'}, 'fromId': 'test_sender'}
-        expected_response = "Valid commands are: !ping, !hello, !help, !nodes"
-
         self.command.handle_packet(packet)
 
-        self.bot.interface.sendText.assert_called_once_with(expected_response, destinationId='test_sender')
+        response = self.bot.interface.sendText.call_args[0][0]
+
+        # Ensure every command in CommandFactory is mentioned in the response
+        for command in CommandFactory.commands.keys():
+            self.assertIn(command, response)
+            print(f"Found command '{command}' in response")
 
     def test_handle_packet_hello_command(self):
         packet = {'decoded': {'text': '!help hello'}, 'fromId': 'test_sender'}
