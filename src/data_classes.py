@@ -3,32 +3,29 @@ from datetime import datetime
 from typing import Optional
 
 
-class User:
-    id: str
-    long_name: str
-    short_name: str
-    macaddr: str
-    hw_model: str
-    public_key: str
-
-
-class Position:
-    altitude: int
-    time: int
-    location_source: str
-    latitude: float
-    longitude: float
-
-
-class DeviceMetrics:
-    battery_level: int
-    voltage: float
-    channel_utilization: float
-    air_util_tx: float
-    uptime_seconds: int
-
-
 class MeshNode:
+    class User:
+        id: str
+        long_name: str
+        short_name: str
+        macaddr: str
+        hw_model: str
+        public_key: str
+
+    class Position:
+        altitude: int
+        time: int
+        location_source: str
+        latitude: float
+        longitude: float
+
+    class DeviceMetrics:
+        battery_level: int
+        voltage: float
+        channel_utilization: float
+        air_util_tx: float
+        uptime_seconds: int
+
     num: int
     user: Optional[User]
     position: Optional[Position]
@@ -68,7 +65,7 @@ class MeshNode:
     @classmethod
     def from_dict(cls, node_data: dict):
         user_data = node_data.get('user', {})
-        user = User()
+        user = MeshNode.User()
         user.id = user_data.get('id', '')
         user.long_name = user_data.get('longName', '')
         user.short_name = user_data.get('shortName', '')
@@ -77,7 +74,7 @@ class MeshNode:
         user.public_key = user_data.get('publicKey', '')
 
         position_data = node_data.get('position', {})
-        position = Position()
+        position = MeshNode.Position()
         position.latitude = position_data.get('latitude', 0.0)
         position.longitude = position_data.get('longitude', 0.0)
         position.altitude = position_data.get('altitude', 0)
@@ -85,7 +82,7 @@ class MeshNode:
         position.location_source = position_data.get('locationSource', '')
 
         device_metrics_data = node_data.get('deviceMetrics', {})
-        device_metrics = DeviceMetrics()
+        device_metrics = MeshNode.DeviceMetrics()
         device_metrics.battery_level = device_metrics_data.get('batteryLevel', 0)
         device_metrics.voltage = device_metrics_data.get('voltage', 0.0)
         device_metrics.channel_utilization = device_metrics_data.get('channelUtilization', 0.0)
