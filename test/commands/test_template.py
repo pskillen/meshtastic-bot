@@ -1,57 +1,43 @@
 import unittest
-from unittest.mock import Mock, patch
 
-from src.bot import MeshtasticBot
 from src.commands.template import TemplateCommand
+from src.data_classes import MeshNode
+from test.commands import CommandTestCase
+from test.test_setup_data import build_test_text_packet
 
 
-class TestTemplateCommand(unittest.TestCase):
+class TestTemplateCommand(CommandTestCase):
+    command: TemplateCommand
+
     def setUp(self):
-        self.bot = Mock(spec=MeshtasticBot)
+        super().setUp()
         self.template = "Hello, {{ sender_name }}! You sent: {{ rx_message }}"
         self.command = TemplateCommand(self.bot, 'template', self.template)
-        self.packet = {
-            'decoded': {'text': '!template test message'},
-            'fromId': 'test_sender',
-            'hopStart': 5,
-            'hopLimit': 3
-        }
 
-    @patch('src.commands.template.TemplateCommand.reply_to')
-    def test_handle_packet(self, mock_reply_to):
-        sender = Mock()
-        sender.user.long_name = 'Test Sender'
-        sender.user.short_name = 'Test'
-        self.bot.nodes.get_by_id.return_value = sender
-        self.bot.get_global_context.return_value = {}
+    def test_handle_packet(self):
+        sender = self.test_nodes[1]
+        packet = build_test_text_packet('!template test message', sender.user.id, self.bot.my_id)
+        packet['hopStart'] = 5
+        packet['hopLimit'] = 3
 
-        self.command.handle_packet(self.packet)
+        self.command.handle_packet(packet)
 
-        expected_message = "Hello, Test Sender! You sent: !template test message"
-        mock_reply_to.assert_called_once_with('test_sender', expected_message)
+        expected_message = f"Hello, {sender.user.long_name}! You sent: !template test message"
+        self.assert_message_sent(expected_message, sender)
 
-    @patch('src.commands.template.TemplateCommand.reply_to')
-    def test_handle_packet_no_sender(self, mock_reply_to):
-        self.bot.nodes.get_by_id.return_value = None
-        self.bot.get_global_context.return_value = {}
+    def test_handle_packet_no_sender(self):
+        sender = MeshNode()
+        sender.user = MeshNode.User()
+        sender.user.id = '1234567890'
 
-        self.command.handle_packet(self.packet)
+        packet = build_test_text_packet('!template test message', sender.user.id, self.bot.my_id)
+        packet['hopStart'] = 5
+        packet['hopLimit'] = 3
 
-        expected_message = "Hello, test_sender! You sent: !template test message"
-        mock_reply_to.assert_called_once_with('test_sender', expected_message)
+        self.command.handle_packet(packet)
 
-    @patch('src.commands.template.TemplateCommand.reply_to')
-    def test_handle_packet_with_global_context(self, mock_reply_to):
-        sender = Mock()
-        sender.user.long_name = 'Test Sender'
-        sender.user.short_name = 'Test'
-        self.bot.nodes.get_by_id.return_value = sender
-        self.bot.get_global_context.return_value = {'global_var': 'global_value'}
-
-        self.command.handle_packet(self.packet)
-
-        expected_message = "Hello, Test Sender! You sent: !template test message"
-        mock_reply_to.assert_called_once_with('test_sender', expected_message)
+        expected_message = f"Hello, {sender.user.id}! You sent: !template test message"
+        self.assert_message_sent(expected_message, sender)
 
 
 if __name__ == '__main__':

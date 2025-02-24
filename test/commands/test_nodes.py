@@ -28,8 +28,8 @@ class TestNodesCommand(CommandWSCTestCase):
         for node in all_nodes[:5]:
             friendly_time = pretty_print_last_heard(node.last_heard)
             expected_response += f"- {node.user.short_name} ({friendly_time})\n"
-        self.mock_interface.sendText.assert_called_once_with(expected_response,
-                                                             destinationId=self.test_nodes[1].user.id)
+
+        self.assert_message_sent(expected_response, self.test_nodes[1])
 
     def test_handle_busy_command(self):
         packet = build_test_text_packet('!nodes busy', self.test_nodes[1].user.id, self.bot.my_id)
@@ -47,9 +47,7 @@ class TestNodesCommand(CommandWSCTestCase):
 
         expected_response += f"(last reset at {last_reset_time})"
 
-        self.mock_interface.sendText.assert_called_once_with(
-            expected_response,
-            destinationId=self.test_nodes[1].user.id)
+        self.assert_message_sent(expected_response, self.test_nodes[1])
 
     def test_handle_busy_detailed_command(self):
         packet = build_test_text_packet('!nodes busy detailed', self.test_nodes[1].user.id, self.bot.my_id)
@@ -77,10 +75,7 @@ class TestNodesCommand(CommandWSCTestCase):
         for packet_type, count in sorted_breakdown:
             expected_response += f"- {packet_type}: {count}\n"
 
-        self.mock_interface.sendText.assert_called_once_with(
-            expected_response,
-            destinationId=self.test_nodes[1].user.id
-        )
+        self.assert_message_sent(expected_response, self.test_nodes[1])
 
 
 if __name__ == '__main__':

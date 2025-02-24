@@ -15,25 +15,25 @@ class TestAdminCommand(CommandWSCTestCase):
     def test_handle_packet_not_authorized(self):
         packet = build_test_text_packet('!admin', self.test_non_admin_nodes[0].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
-        self.mock_interface.sendText.assert_called_once_with(
+        self.assert_message_sent(
             f"Sorry {self.test_non_admin_nodes[0].user.long_name}, you are not authorized to use this command",
-            destinationId=self.test_non_admin_nodes[0].user.id
+            self.test_non_admin_nodes[0]
         )
 
     def test_handle_packet_authorized(self):
         packet = build_test_text_packet('!admin', self.test_admin_nodes[0].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
-        self.mock_interface.sendText.assert_called_once_with(
+        self.assert_message_sent(
             "Invalid command format - expected !admin <command> <args>",
-            destinationId=self.test_admin_nodes[0].user.id
+            self.test_admin_nodes[0]
         )
 
     def test_handle_base_command(self):
         packet = build_test_text_packet('!admin', self.test_admin_nodes[0].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
-        self.mock_interface.sendText.assert_called_once_with(
+        self.assert_message_sent(
             "Invalid command format - expected !admin <command> <args>",
-            destinationId=self.test_admin_nodes[0].user.id
+            self.test_admin_nodes[0]
         )
 
     def test_reset_packets(self):
@@ -44,33 +44,33 @@ class TestAdminCommand(CommandWSCTestCase):
         self.assertEqual(self.bot.nodes.node_packets_today, {})
         self.assertEqual(self.bot.nodes.node_packets_today_breakdown, {})
 
-        self.mock_interface.sendText.assert_called_once_with(
+        self.assert_message_sent(
             "Packet counter reset",
-            destinationId=self.test_admin_nodes[0].user.id
+            self.test_admin_nodes[0]
         )
 
     def test_reset_packets_missing_argument(self):
         packet = build_test_text_packet('!admin reset', self.test_admin_nodes[0].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
-        self.mock_interface.sendText.assert_called_once_with(
+        self.assert_message_sent(
             "reset: Missing argument - options are: ['packets']",
-            destinationId=self.test_admin_nodes[0].user.id
+            self.test_admin_nodes[0]
         )
 
     def test_reset_packets_unknown_argument(self):
         packet = build_test_text_packet('!admin reset unknown', self.test_admin_nodes[0].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
-        self.mock_interface.sendText.assert_called_once_with(
+        self.assert_message_sent(
             "reset: Unknown argument 'unknown' - options are: ['packets']",
-            destinationId=self.test_admin_nodes[0].user.id
+            self.test_admin_nodes[0]
         )
 
     def test_show_users_user_not_found(self):
         packet = build_test_text_packet('!admin users !ffffff', self.test_admin_nodes[0].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
-        self.mock_interface.sendText.assert_called_once_with(
+        self.assert_message_sent(
             "User '!ffffff' not found",
-            destinationId=self.test_admin_nodes[0].user.id
+            self.test_admin_nodes[0]
         )
 
     def test_show_users_user_found(self):
@@ -90,9 +90,9 @@ class TestAdminCommand(CommandWSCTestCase):
         for cmd, count in unknown_command_stats.items():
             expected_response += f"- {cmd}: {count}\n"
 
-        self.mock_interface.sendText.assert_called_once_with(
+        self.assert_message_sent(
             expected_response,
-            destinationId=self.test_admin_nodes[0].user.id
+            self.test_admin_nodes[0]
         )
 
     def test_show_users_all_users(self):
@@ -111,9 +111,9 @@ class TestAdminCommand(CommandWSCTestCase):
                             + sum(self.bot.command_logger.unknown_command_stats.get(node_id, {}).values())
             expected_response += f"- {node.user.short_name}: {request_count} requests\n"
 
-        self.mock_interface.sendText.assert_called_once_with(
+        self.assert_message_sent(
             expected_response,
-            destinationId=self.test_admin_nodes[0].user.id
+            self.test_admin_nodes[0]
         )
 
     def test_show_help(self):

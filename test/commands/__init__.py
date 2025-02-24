@@ -24,6 +24,12 @@ class CommandTestCase(unittest.TestCase, ABC):
         self.test_nodes = self.test_non_admin_nodes + self.test_admin_nodes
         self.mock_interface = self.bot.interface = Mock()
 
+    def assert_message_sent(self, expected_response: str, to: MeshNode):
+        self.mock_interface.sendText.assert_called_once_with(
+            expected_response,
+            destinationId=to.user.id
+        )
+
 
 class CommandWSCTestCase(CommandTestCase):
     command: AbstractCommandWithSubcommands

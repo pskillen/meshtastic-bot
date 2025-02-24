@@ -1,23 +1,26 @@
 import unittest
-from unittest.mock import MagicMock
 
-from src.bot import MeshtasticBot
 from src.commands.hello import HelloCommand
+from test.commands import CommandTestCase
+from test.test_setup_data import build_test_text_packet
 
 
-class TestHelloCommand(unittest.TestCase):
+class TestHelloCommand(CommandTestCase):
+    command: HelloCommand
+
     def setUp(self):
-        self.bot = MeshtasticBot(address="localhost")
-        self.bot.interface = MagicMock()
+        super().setUp()
         self.command = HelloCommand(bot=self.bot)
 
     def test_handle_packet(self):
-        packet = {'fromId': 'test_sender'}
-        expected_response = "Hello, test_sender! How can I help you? (tip: try !help)"
+        sender_node = self.test_nodes[1]
+
+        packet = build_test_text_packet('!hello', sender_node.user.id, self.bot.my_id)
+        expected_response = f"Hello, {sender_node.user.long_name}! How can I help you? (tip: try !help)"
 
         self.command.handle_packet(packet)
 
-        self.bot.interface.sendText.assert_called_once_with(expected_response, destinationId='test_sender')
+        self.assert_message_sent(expected_response, sender_node)
 
 
 if __name__ == '__main__':

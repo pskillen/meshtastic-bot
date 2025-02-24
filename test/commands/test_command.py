@@ -1,10 +1,10 @@
 import unittest
-from unittest.mock import MagicMock
 
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
-from src.bot import MeshtasticBot
 from src.commands.command import AbstractCommand, AbstractCommandWithSubcommands
+from test.commands import CommandTestCase, CommandWSCTestCase
+from test.test_setup_data import build_test_text_packet
 
 
 class ConcreteCommand(AbstractCommand):
@@ -20,43 +20,50 @@ class ConcreteCommandWithSubcommands(AbstractCommandWithSubcommands):
         self.reply(packet, "Help shown")
 
 
-class TestAbstractCommand(unittest.TestCase):
+class TestAbstractCommand(CommandTestCase):
+    command: ConcreteCommand
+
     def setUp(self):
-        self.bot = MeshtasticBot(address="localhost")
-        self.bot.interface = MagicMock()
+        super().setUp()
         self.command = ConcreteCommand(bot=self.bot, base_command="test")
 
     def test_handle_packet(self):
-        packet = {'decoded': {'text': '!test'}, 'fromId': 'test_sender'}
+        packet = build_test_text_packet('!test', self.test_nodes[1].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
-        self.bot.interface.sendText.assert_called_once_with("Handled", destinationId='test_sender')
+
+        self.assert_message_sent("Handled", self.test_nodes[1])
 
     def test_reply(self):
-        packet = {'decoded': {'text': '!test'}, 'fromId': 'test_sender'}
+        packet = build_test_text_packet('!test', self.test_nodes[1].user.id, self.bot.my_id)
         self.command.reply(packet, "Reply message")
-        self.bot.interface.sendText.assert_called_once_with("Reply message", destinationId='test_sender')
+
+        self.assert_message_sent("Reply message", self.test_nodes[1])
 
 
-class TestAbstractCommandWithSubcommands(unittest.TestCase):
+class TestAbstractCommandWithSubcommands(CommandWSCTestCase):
+    command: ConcreteCommandWithSubcommands
+
     def setUp(self):
-        self.bot = MeshtasticBot(address="localhost")
-        self.bot.interface = MagicMock()
+        super().setUp()
         self.command = ConcreteCommandWithSubcommands(bot=self.bot, base_command_str="test")
 
     def test_handle_base_command(self):
-        packet = {'decoded': {'text': '!test'}, 'fromId': 'test_sender'}
+        packet = build_test_text_packet('!test', self.test_nodes[1].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
-        self.bot.interface.sendText.assert_called_once_with("Base command handled", destinationId='test_sender')
+
+        self.assert_message_sent("Base command handled", self.test_nodes[1])
 
     def test_show_help(self):
-        packet = {'decoded': {'text': '!test help'}, 'fromId': 'test_sender'}
+        packet = build_test_text_packet('!test help', self.test_nodes[1].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
-        self.bot.interface.sendText.assert_called_once_with("Help shown", destinationId='test_sender')
+
+        self.assert_message_sent("Help shown", self.test_nodes[1])
 
     def test_unknown_subcommand(self):
-        packet = {'decoded': {'text': '!test unknown'}, 'fromId': 'test_sender'}
+        packet = build_test_text_packet('!test unknown', self.test_nodes[1].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
-        self.bot.interface.sendText.assert_called_once_with("Unknown command 'unknown'", destinationId='test_sender')
+
+        self.assert_message_sent("Unknown command 'unknown'", self.test_nodes[1])
 
 
 if __name__ == '__main__':
