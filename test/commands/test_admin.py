@@ -117,6 +117,7 @@ class TestAdminCommand(CommandWSCTestCase):
         )
 
     def test_show_help(self):
+        # Override base test because we need an admin node
         packet = build_test_text_packet('!admin help', self.test_admin_nodes[0].user.id, self.bot.my_id)
         self.assert_show_help_for_command(packet)
 

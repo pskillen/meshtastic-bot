@@ -82,10 +82,6 @@ class TestNodesCommand(CommandWSCTestCase):
             destinationId=self.test_nodes[1].user.id
         )
 
-    def test_show_help(self):
-        packet = build_test_text_packet('!nodes help', self.test_nodes[1].user.id, self.bot.my_id)
-        self.assert_show_help_for_command(packet)
-
 
 if __name__ == '__main__':
     unittest.main()
