@@ -1,112 +1,90 @@
 import unittest
-from datetime import datetime, timedelta
-from unittest.mock import MagicMock
 
-from src.bot import MeshtasticBot
 from src.commands.nodes import NodesCommand
+from src.helpers import pretty_print_last_heard
+from test.commands import CommandWSCTestCase
+from test.test_setup_data import build_test_text_packet
 
 
-class TestNodesCommand(unittest.TestCase):
+class TestNodesCommand(CommandWSCTestCase):
+    command: NodesCommand
+
     def setUp(self):
-        self.bot = MeshtasticBot(address="localhost")
-        self.bot.interface = MagicMock()
-        self.bot.nodes = MagicMock()
-        self.command = NodesCommand(bot=self.bot)
+        super().setUp()
+        self.command = NodesCommand(self.bot)
 
-        # Mocking nodes data
-        self.node1 = MagicMock()
-        self.node1.user.id = 'node1'
-        self.node1.user.short_name = 'Node1'
-        self.node1.user.long_name = 'Node 1'
-        self.node1.last_heard = int((datetime.now() - timedelta(minutes=5)).timestamp())
-
-        self.node2 = MagicMock()
-        self.node2.user.id = 'node2'
-        self.node2.user.short_name = 'Node2'
-        self.node2.user.long_name = 'Node 2'
-        self.node2.last_heard = int((datetime.now() - timedelta(minutes=10)).timestamp())
-
-        self.bot.nodes.list.return_value = [self.node1, self.node2]
-        self.bot.nodes.get_online_nodes.return_value = [self.node1]
-        self.bot.nodes.get_offline_nodes.return_value = [self.node2]
-        self.bot.nodes.node_packets_today = {
-            'node1': 5,
-            'node2': 3
-        }
-        self.bot.nodes.node_packets_today_breakdown = {
-            'node1': {
-                'cmd1': 2,
-                'cmd2': 3,
-            },
-            'node2': {
-                'cmd1': 1,
-                'cmd2': 2,
-            }
-        }
-        self.bot.nodes.packet_counter_reset_time.strftime.return_value = '12:00:00'
+        self.online_count = len(self.bot.nodes.get_online_nodes())
+        self.offline_count = len(self.bot.nodes.get_offline_nodes())
 
     def test_handle_base_command(self):
-        packet = {'decoded': {'text': '!nodes'}, 'fromId': 'test_sender'}
-
+        packet = build_test_text_packet('!nodes', self.test_nodes[1].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
 
-        expected_response = "1 nodes online, 1 offline.\nRecent nodes:\n"
-        expected_response += "- Node1 (5m ago)\n"
-        expected_response += "- Node2 (10m ago)\n"
-        self.bot.interface.sendText.assert_called_once_with(expected_response, destinationId='test_sender')
+        expected_response = f"{self.online_count} nodes online, {self.offline_count} offline.\nRecent nodes:\n"
+
+        # nodes in response will be sorted by last_heard (desc)
+        all_nodes = sorted(self.test_nodes, key=lambda x: x.last_heard, reverse=True)
+
+        for node in all_nodes[:5]:
+            friendly_time = pretty_print_last_heard(node.last_heard)
+            expected_response += f"- {node.user.short_name} ({friendly_time})\n"
+        self.mock_interface.sendText.assert_called_once_with(expected_response,
+                                                             destinationId=self.test_nodes[1].user.id)
 
     def test_handle_busy_command(self):
-        packet = {'decoded': {'text': '!nodes busy'}, 'fromId': 'test_sender'}
-
+        packet = build_test_text_packet('!nodes busy', self.test_nodes[1].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
 
-        expected_response = "1 nodes online.\nBusy nodes:\n"
-        expected_response += "- Node1 (5 pkts)\n"
-        expected_response += "- Node2 (3 pkts)\n"
-        expected_response += "(last reset at 12:00:00)"
-        self.bot.interface.sendText.assert_called_once_with(expected_response, destinationId='test_sender')
+        # nodes in response will be sorted by packets_today (desc)
+        sorted_nodes = sorted(self.bot.nodes.node_packets_today.items(), key=lambda x: x[1], reverse=True)
+
+        expected_response = f"{self.online_count} nodes online.\nBusy nodes:\n"
+        for node_id, packet_count in sorted_nodes[:5]:
+            node = self.bot.nodes.get_by_id(node_id)
+            expected_response += f"- {node.user.short_name} ({packet_count} pkts)\n"
+
+        last_reset_time = self.bot.nodes.packet_counter_reset_time.strftime("%H:%M:%S")
+
+        expected_response += f"(last reset at {last_reset_time})"
+
+        self.mock_interface.sendText.assert_called_once_with(
+            expected_response,
+            destinationId=self.test_nodes[1].user.id)
 
     def test_handle_busy_detailed_command(self):
-        packet = {'decoded': {'text': '!nodes busy detailed'}, 'fromId': 'test_sender'}
-
+        packet = build_test_text_packet('!nodes busy detailed', self.test_nodes[1].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
 
-        self.bot.interface.sendText.assert_called()
-        self.assertEqual(self.bot.interface.sendText.call_count, 2)
+        self.mock_interface.sendText.assert_called()
+        self.assertEqual(self.mock_interface.sendText.call_count, 3)
 
     def test_handle_busy_specific_node(self):
-        packet = {'decoded': {'text': '!nodes busy node1'}, 'fromId': 'test_sender'}
+        target_node = self.test_nodes[1]  # 0 is my_id
 
+        packet = build_test_text_packet(f'!nodes busy {target_node.user.short_name}', self.test_nodes[1].user.id,
+                                        self.bot.my_id)
         self.command.handle_packet(packet)
 
-        expected_response = "Node 1 (Node1)\n"
-        expected_response += "Last heard: 5m ago\n"
-        expected_response += "Pkts today: 5\n"
-        expected_response += "- cmd2: 3\n"
-        expected_response += "- cmd1: 2\n"
-        self.bot.interface.sendText.assert_called_once_with(expected_response, destinationId='test_sender')
+        # Infer the expected response from the test data
+        packets_today = self.bot.nodes.node_packets_today.get(target_node.user.id, 0)
+        packet_breakdown_today = self.bot.nodes.node_packets_today_breakdown.get(target_node.user.id, {})
+
+        expected_response = f"{target_node.user.long_name} ({target_node.user.short_name})\n"
+        expected_response += f"Last heard: {pretty_print_last_heard(target_node.last_heard)}\n"
+        expected_response += f"Pkts today: {packets_today}\n"
+
+        sorted_breakdown = sorted(packet_breakdown_today.items(), key=lambda x: x[1], reverse=True)
+        for packet_type, count in sorted_breakdown:
+            expected_response += f"- {packet_type}: {count}\n"
+
+        self.mock_interface.sendText.assert_called_once_with(
+            expected_response,
+            destinationId=self.test_nodes[1].user.id
+        )
 
     def test_show_help(self):
-        packet = {'decoded': {'text': '!nodes help'}, 'fromId': 'test_sender'}
-        self.command.handle_packet(packet)
-
-        response = self.bot.interface.sendText.call_args[0][0]
-
-        # summary line should be in the response
-        want = f"!{self.command.base_command}: "
-        self.assertIn(want, response)
-
-        # each sub_command in command should appear in the response
-        for sub_command in self.command.sub_commands:
-            # we can skip the '!cmd help' subcommand
-            if sub_command == 'help':
-                continue
-            # and the empty string subcommand
-            if sub_command == '':
-                continue
-
-            want = f"!{self.command.base_command} {sub_command}: "
-            self.assertIn(want, response)
+        packet = build_test_text_packet('!nodes help', self.test_nodes[1].user.id, self.bot.my_id)
+        self.assert_show_help_for_command(packet)
 
 
 if __name__ == '__main__':
