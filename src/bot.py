@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 
 import meshtastic.tcp_interface
 import schedule
@@ -9,6 +9,7 @@ from pubsub import pub
 
 from src.commands.factory import CommandFactory
 from src.data_classes import MeshNode, NodeInfoCollection
+from src.helpers import pretty_print_last_heard
 from src.loggers import UserCommandLogger
 from src.tcp_interface import AutoReconnectTcpInterface
 
@@ -120,25 +121,8 @@ class MeshtasticBot:
             self.nodes.add_node(mesh_node)
 
             if self.init_complete:
-                last_heard = MeshtasticBot.pretty_print_last_heard(mesh_node.last_heard)
+                last_heard = pretty_print_last_heard(mesh_node.last_heard)
                 logging.info(f"New user: {mesh_node.user.long_name} (last heard {last_heard})")
-
-    @staticmethod
-    def pretty_print_last_heard(last_heard_timestamp: int) -> str:
-        now = datetime.now(timezone.utc)
-        last_heard = datetime.fromtimestamp(last_heard_timestamp, timezone.utc)
-        delta = now - last_heard
-
-        if delta.days > 0:
-            return f"{delta.days}d ago"
-        elif delta.seconds >= 3600:
-            hours = delta.seconds // 3600
-            return f"{hours}h ago"
-        elif delta.seconds >= 60:
-            minutes = delta.seconds // 60
-            return f"{minutes}m ago"
-        else:
-            return f"{delta.seconds}s ago"
 
     def print_nodes(self):
         # filter nodes where last heard is more than 2 hours ago
@@ -151,7 +135,7 @@ class MeshtasticBot:
         for node in sorted_nodes:
             if node.user.id == self.my_id:
                 continue
-            last_heard = MeshtasticBot.pretty_print_last_heard(node.last_heard)
+            last_heard = pretty_print_last_heard(node.last_heard)
             logging.info(f"- {node.user.long_name} (last heard {last_heard})")
 
         logging.info(f"- Plus {len(offline_nodes)} offline nodes")

@@ -2,6 +2,7 @@ from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
 from src.bot import MeshtasticBot
 from src.commands.command import AbstractCommandWithSubcommands
+from src.helpers import pretty_print_last_heard
 
 
 class NodesCommand(AbstractCommandWithSubcommands):
@@ -29,7 +30,7 @@ class NodesCommand(AbstractCommandWithSubcommands):
         # Add up to 10 nodes with the most packets received today
         response += "\nRecent nodes:\n"
         for i, node in enumerate(sorted_nodes[:self.max_node_count_summary]):
-            response += f"- {node.user.short_name} ({MeshtasticBot.pretty_print_last_heard(node.last_heard)})\n"
+            response += f"- {node.user.short_name} ({pretty_print_last_heard(node.last_heard)})\n"
 
         self.reply(packet, response)
 
@@ -79,7 +80,7 @@ class NodesCommand(AbstractCommandWithSubcommands):
 
         # summarise the node user and packet metrics
         response = f"{node.user.long_name} ({node.user.short_name})\n"
-        response += f"Last heard: {MeshtasticBot.pretty_print_last_heard(node.last_heard)}\n"
+        response += f"Last heard: {pretty_print_last_heard(node.last_heard)}\n"
         response += f"Pkts today: {packets_today}\n"
 
         # sort packets breakdown by count descending
