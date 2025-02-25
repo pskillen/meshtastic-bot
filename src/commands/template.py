@@ -30,9 +30,9 @@ class TemplateCommand(AbstractCommand):
             'args': message[len(self.base_command) + 1:].strip(),
             'sender': sender,
             'sender_id': sender_id,
-            'sender_name': sender.user.long_name,
-            'sender_long_name': sender.user.long_name,
-            'sender_short_name': sender.user.short_name,
+            'sender_name': sender.user.long_name if sender else sender_id,
+            'sender_long_name': sender.user.long_name if sender else sender_id,
+            'sender_short_name': sender.user.short_name if sender else sender_id,
             'hops_away': hops_away,
         }
         global_context = self.bot.get_global_context()
