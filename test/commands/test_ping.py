@@ -1,39 +1,46 @@
 import unittest
-from unittest.mock import MagicMock
 
-from src.bot import MeshtasticBot
 from src.commands.ping import PingCommand
+from test.commands import CommandTestCase
+from test.test_setup_data import build_test_text_packet
 
 
-class TestPingCommand(unittest.TestCase):
+class TestPingCommand(CommandTestCase):
+    command: PingCommand
+
     def setUp(self):
-        self.bot = MeshtasticBot(address="localhost")
-        self.bot.interface = MagicMock()
+        super().setUp()
         self.command = PingCommand(bot=self.bot)
 
     def test_handle_packet_no_additional_message(self):
-        packet = {'decoded': {'text': '!ping'}, 'fromId': 'test_sender', 'hopStart': 3, 'hopLimit': 3}
+        packet = build_test_text_packet('!ping', self.test_nodes[1].user.id, self.bot.my_id)
+        packet['hopStart'] = 3
+        packet['hopLimit'] = 3
         expected_response = "!pong (ping took 0 hops)"
 
         self.command.handle_packet(packet)
 
-        self.bot.interface.sendText.assert_called_once_with(expected_response, destinationId='test_sender')
+        self.assert_message_sent(expected_response, self.test_nodes[1])
 
     def test_handle_packet_with_additional_message(self):
-        packet = {'decoded': {'text': '!ping extra message'}, 'fromId': 'test_sender', 'hopStart': 3, 'hopLimit': 3}
+        packet = build_test_text_packet('!ping extra message', self.test_nodes[1].user.id, self.bot.my_id)
+        packet['hopStart'] = 3
+        packet['hopLimit'] = 3
         expected_response = "!pong: extra message (ping took 0 hops)"
 
         self.command.handle_packet(packet)
 
-        self.bot.interface.sendText.assert_called_once_with(expected_response, destinationId='test_sender')
+        self.assert_message_sent(expected_response, self.test_nodes[1])
 
     def test_handle_packet_with_hop_count(self):
-        packet = {'decoded': {'text': '!ping'}, 'fromId': 'test_sender', 'hopStart': 3, 'hopLimit': 2}
+        packet = build_test_text_packet('!ping', self.test_nodes[1].user.id, self.bot.my_id)
+        packet['hopStart'] = 3
+        packet['hopLimit'] = 2
         expected_response = "!pong (ping took 1 hops)"
 
         self.command.handle_packet(packet)
 
-        self.bot.interface.sendText.assert_called_once_with(expected_response, destinationId='test_sender')
+        self.assert_message_sent(expected_response, self.test_nodes[1])
 
 
 if __name__ == '__main__':
