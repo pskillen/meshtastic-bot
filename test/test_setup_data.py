@@ -45,7 +45,7 @@ def make_node():
     node = MeshNode()
     node.user = MeshNode.User()
     node.user.id = random_node_id_hex()
-    node.user.short_name = node.user.id[:5]
+    node.user.short_name = node.user.id[-4:]
     node.user.long_name = 'Node ' + node.user.id
 
     last_heard_mins_ago = random.randint(0, 180)
@@ -63,7 +63,6 @@ def get_test_bot(node_count=2, admin_node_count=1):
     # Mocking nodes data
     nodes: list[MeshNode] = [make_node() for _ in range(node_count)]
     admin_nodes: list[MeshNode] = [make_node() for _ in range(admin_node_count)]
-
 
     bot = MeshtasticBot(address="localhost")
     bot.nodes.nodes = {node.user.id: node for node in nodes + admin_nodes}
