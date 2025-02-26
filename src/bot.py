@@ -97,10 +97,12 @@ class MeshtasticBot:
     def handle_public_message(self, packet: MeshPacket):
         """Handle public messages."""
         message = packet['decoded']['text']
+        from_id = packet['fromId']
+        sender = self.nodes.get_by_id(from_id)
 
         responder = ResponderFactory.match_responder(message, self)
         if responder:
-            logging.info(f"Handling message with responder {responder.__class__.__name__}: {message}")
+            logging.info(f"Handling message from {sender.user.long_name if sender else from_id} with responder {responder.__class__.__name__}: {message}")
             responder.handle_packet(packet)
 
     def on_receive(self, packet: MeshPacket, interface):
