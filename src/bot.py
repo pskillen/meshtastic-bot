@@ -11,6 +11,7 @@ from src.commands.factory import CommandFactory
 from src.data_classes import MeshNode, NodeInfoCollection
 from src.helpers import pretty_print_last_heard
 from src.loggers import UserCommandLogger
+from src.responders.responder_factory import ResponderFactory
 from src.tcp_interface import AutoReconnectTcpInterface
 
 
@@ -65,15 +66,20 @@ class MeshtasticBot:
     def on_receive_text(self, packet: MeshPacket, interface):
         """Callback function triggered when a text message is received."""
 
-        message = packet['decoded']['text']
-        from_id = packet['fromId']
         to_id = packet['toId']
 
-        if to_id != self.my_id:
-            return
+        if to_id == self.my_id:
+            self.handle_private_message(packet)
+        else:
+            self.handle_public_message(packet)
+
+    def handle_private_message(self, packet: MeshPacket):
+        """Handle private messages."""
+        message = packet['decoded']['text']
+        from_id = packet['fromId']
 
         sender = self.nodes.get_by_id(from_id)
-        logging.info(f"Received message: '{message}' from {sender.user.long_name if sender else from_id}")
+        logging.info(f"Received private message: '{message}' from {sender.user.long_name if sender else from_id}")
 
         words = message.split()
         command_name = words[0]
@@ -87,6 +93,15 @@ class MeshtasticBot:
                 logging.error(f"Error handling message: {e}")
         else:
             self.command_logger.log_unknown_request(from_id, message)
+
+    def handle_public_message(self, packet: MeshPacket):
+        """Handle public messages."""
+        message = packet['decoded']['text']
+
+        responder = ResponderFactory.match_responder(message, self)
+        if responder:
+            logging.info(f"Handling message with responder {responder.__class__.__name__}: {message}")
+            responder.handle_packet(packet)
 
     def on_receive(self, packet: MeshPacket, interface):
         sender = packet['fromId']
