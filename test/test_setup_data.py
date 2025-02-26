@@ -45,7 +45,7 @@ def make_node():
     node = MeshNode()
     node.user = MeshNode.User()
     node.user.id = random_node_id_hex()
-    node.user.short_name = node.user.id[:5]
+    node.user.short_name = node.user.id[-4:]
     node.user.long_name = 'Node ' + node.user.id
 
     last_heard_mins_ago = random.randint(0, 180)
@@ -63,7 +63,6 @@ def get_test_bot(node_count=2, admin_node_count=1):
     # Mocking nodes data
     nodes: list[MeshNode] = [make_node() for _ in range(node_count)]
     admin_nodes: list[MeshNode] = [make_node() for _ in range(admin_node_count)]
-
 
     bot = MeshtasticBot(address="localhost")
     bot.nodes.nodes = {node.user.id: node for node in nodes + admin_nodes}
@@ -104,7 +103,8 @@ def get_test_bot(node_count=2, admin_node_count=1):
 
 def build_test_text_packet(msg: str,
                            sender_id: str = random_node_id_hex(), to_id: str = random_node_id_hex(),
-                           max_hops=6, hops_left=3) -> MeshPacket:
+                           max_hops=6, hops_left=3,
+                           channel: int = None) -> MeshPacket:
     # NB: lifted from a real Meshtastic packet - can be considered a "golden" packet
     packet = {
         "from": meshtastic_hex_to_int(sender_id),
@@ -127,5 +127,7 @@ def build_test_text_packet(msg: str,
         "fromId": sender_id,
         "toId": to_id,
     }
+    if channel:
+        packet['channel'] = channel
 
     return packet

@@ -18,13 +18,13 @@ class AbstractCommand(ABC):
     def handle_packet(self, packet: MeshPacket) -> None:
         pass
 
-    def reply(self, packet: MeshPacket, message: str) -> None:
+    def reply(self, packet: MeshPacket, message: str, want_ack=False) -> None:
         destination_id = packet['fromId']
-        self.reply_to(destination_id, message)
+        self.reply_to(destination_id, message, want_ack)
 
-    def reply_to(self, destination_id: str, message: str) -> None:
+    def reply_to(self, destination_id: str, message: str, want_ack=False) -> None:
         logging.debug(f"Sending response: '{message}'")
-        self.bot.interface.sendText(message, destinationId=destination_id)
+        self.bot.interface.sendText(message, destinationId=destination_id, wantAck=want_ack)
 
     def get_command_for_logging(self, message: str) -> str:
         words = message.split()
