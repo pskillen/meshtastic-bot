@@ -1,8 +1,18 @@
 import importlib
+import re
 
 
 class ResponderFactory:
-    responders = []
+    responders = [
+        {
+            "class": "src.responders.message_reaction_responder.MessageReactionResponder",
+            "trigger_regex": [
+                re.compile(r"^test$", re.IGNORECASE),
+                re.compile(r"^testing$", re.IGNORECASE),
+            ],
+            "args": ["👍🔉👂✅📡👋🐭"],
+        },
+    ]
 
     @staticmethod
     def match_responder(message: str, bot):
