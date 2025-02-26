@@ -103,7 +103,8 @@ def get_test_bot(node_count=2, admin_node_count=1):
 
 def build_test_text_packet(msg: str,
                            sender_id: str = random_node_id_hex(), to_id: str = random_node_id_hex(),
-                           max_hops=6, hops_left=3) -> MeshPacket:
+                           max_hops=6, hops_left=3,
+                           channel: int = None) -> MeshPacket:
     # NB: lifted from a real Meshtastic packet - can be considered a "golden" packet
     packet = {
         "from": meshtastic_hex_to_int(sender_id),
@@ -126,5 +127,7 @@ def build_test_text_packet(msg: str,
         "fromId": sender_id,
         "toId": to_id,
     }
+    if channel:
+        packet['channel'] = channel
 
     return packet
