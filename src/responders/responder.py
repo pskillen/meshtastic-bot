@@ -30,7 +30,7 @@ class AbstractResponder(ABC):
 
         reply_id = packet['id']
         sender = packet['from']
-        channel = packet['channel'] or 0
+        channel = packet['channel'] if 'channel' in packet else 0
 
         # Encode the emoji string to its corresponding byte sequence
         emoji_bytes = emoji.encode('utf-8')
