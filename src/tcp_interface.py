@@ -20,11 +20,11 @@ class AutoReconnectTcpInterface(TCPInterface):
         while True:
             try:
                 self.close()
-                time.sleep(backoff_time)
                 self.connect()
                 logging.info("Reconnected successfully")
                 break
             except Exception as e:
                 logging.error(f"Reconnection attempt failed: {e}")
-                backoff_time = min(backoff_time * 2, max_backoff_time)  # Exponential back-off
+                backoff_time = min(backoff_time * 1.5, max_backoff_time)  # Exponential back-off
                 logging.info(f"Next reconnection attempt in {backoff_time} seconds")
+                time.sleep(backoff_time)
