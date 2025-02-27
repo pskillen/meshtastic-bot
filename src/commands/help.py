@@ -12,9 +12,11 @@ class HelpCommand(AbstractCommandWithSubcommands):
         self.sub_commands['nodes'] = self.handle_nodes
         self.sub_commands['whoami'] = self.handle_whoami
         self.sub_commands['prefs'] = self.handle_prefs
+        self.sub_commands['enroll'] = self.handle_enroll
+        self.sub_commands['leave'] = self.handle_leave
 
     def handle_base_command(self, packet: MeshPacket, args: list[str]) -> None:
-        response = "Valid commands are: !ping, !hello, !help, !nodes, !whoami, !admin"
+        response = "Valid commands are: !ping, !hello, !help, !nodes, !whoami, !prefs, !admin, !enroll, !leave"
         self.reply(packet, response)
 
     def handle_hello(self, packet: MeshPacket, args: list[str]) -> None:
@@ -39,4 +41,12 @@ class HelpCommand(AbstractCommandWithSubcommands):
 
     def handle_prefs(self, packet: MeshPacket, args: list[str]) -> None:
         response = "!prefs: show your user preferences"
+        self.reply(packet, response)
+
+    def handle_enroll(self, packet: MeshPacket, args: list[str]) -> None:
+        response = "!enroll: bot will respond to certain messages from you on public channels"
+        self.reply(packet, response)
+
+    def handle_leave(self, packet: MeshPacket, args: list[str]) -> None:
+        response = "!leave: bot will not respond to you on public channels"
         self.reply(packet, response)
