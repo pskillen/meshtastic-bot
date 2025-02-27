@@ -1,9 +1,11 @@
 import unittest
+from unittest.mock import MagicMock
 
 from src.commands.template import TemplateCommand
 from src.data_classes import MeshNode
+from src.persistence.user_prefs import UserPrefs
 from test.commands import CommandTestCase
-from test.test_setup_data import build_test_text_packet
+from test.test_setup_data import build_test_text_packet, meshtastic_hex_to_int
 
 
 class TestTemplateCommand(CommandTestCase):
@@ -38,6 +40,23 @@ class TestTemplateCommand(CommandTestCase):
 
         expected_message = f"Hello, {sender.user.id}! You sent: !template test message"
         self.assert_message_sent(expected_message, sender)
+
+    def test_user_prefs_rendering(self):
+        sender = self.test_nodes[1]
+        packet = build_test_text_packet('!myuserprefs', sender.user.id, self.bot.my_id)
+
+        custom_user_prefs = UserPrefs(meshtastic_hex_to_int(sender.user.id))
+        custom_user_prefs.respond_to_testing = True
+
+        self.bot.user_prefs_persistence = MagicMock()
+        self.bot.user_prefs_persistence.get_user_prefs.return_value = custom_user_prefs
+
+        template = "{{ 'Respond to testing: ' ~ user_prefs.respond_to_testing }}"
+        command = TemplateCommand(self.bot, 'myuserprefs', template)
+        command.handle_packet(packet)
+
+        expected_rendered_message = "Respond to testing: True"
+        self.assert_message_sent(expected_rendered_message, sender)
 
 
 if __name__ == '__main__':

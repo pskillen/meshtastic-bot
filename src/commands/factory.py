@@ -23,6 +23,10 @@ class CommandFactory:
             "class": "src.commands.template.WhoAmI",
             "args": []
         },
+        "!prefs": {
+            "class": "src.commands.template.UserPrefsCommand",
+            "args": []
+        },
         "!admin": {
             "class": "src.commands.admin.AdminCommand",
             "args": []
