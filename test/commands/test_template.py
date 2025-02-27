@@ -45,7 +45,7 @@ class TestTemplateCommand(CommandTestCase):
         sender = self.test_nodes[1]
         packet = build_test_text_packet('!myuserprefs', sender.user.id, self.bot.my_id)
 
-        custom_user_prefs = UserPrefs(meshtastic_hex_to_int(sender.user.id))
+        custom_user_prefs = UserPrefs(sender.user.id)
         custom_user_prefs.respond_to_testing = True
 
         self.bot.user_prefs_persistence = MagicMock()

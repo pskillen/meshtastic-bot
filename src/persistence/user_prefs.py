@@ -2,10 +2,10 @@ import abc
 
 
 class UserPrefs:
-    user_id: int
+    user_id: str
     respond_to_testing: bool
 
-    def __init__(self, user_id: int):
+    def __init__(self, user_id: str):
         self.user_id = user_id
         self.respond_to_testing = False
 
