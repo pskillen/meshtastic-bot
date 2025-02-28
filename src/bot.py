@@ -11,6 +11,7 @@ from src.commands.factory import CommandFactory
 from src.data_classes import MeshNode, NodeInfoCollection
 from src.helpers import pretty_print_last_heard
 from src.loggers import UserCommandLogger
+from src.persistence.user_prefs import AbstractUserPrefsPersistence
 from src.responders.responder_factory import ResponderFactory
 from src.tcp_interface import AutoReconnectTcpInterface
 
@@ -25,6 +26,8 @@ class MeshtasticBot:
     nodes: NodeInfoCollection
     command_logger: UserCommandLogger
 
+    user_prefs_persistence: AbstractUserPrefsPersistence
+
     def __init__(self, address: str):
         self.address = address
 
@@ -36,6 +39,7 @@ class MeshtasticBot:
         self.my_id = None
         self.nodes = NodeInfoCollection()
         self.command_logger = UserCommandLogger()
+        self.user_prefs_persistence = None
 
     def connect(self):
         logging.info(f"Connecting to Meshtastic node at {self.address}...")

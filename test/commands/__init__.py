@@ -50,7 +50,7 @@ class CommandWSCTestCase(CommandTestCase):
             if sub_command == '':
                 continue
 
-            want = f"!{self.command.base_command} {sub_command} "
+            want = f"!{self.command.base_command} {sub_command}"
             self.assertIn(want, response)
 
     def test_show_help(self):

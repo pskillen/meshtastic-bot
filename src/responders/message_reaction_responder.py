@@ -25,5 +25,9 @@ class MessageReactionResponder(AbstractResponder):
         self.react_to(packet, emoji)
 
     def _is_enrolled(self, from_id: str) -> bool:
-        # TODO: Implement this
-        return from_id in self.bot.admin_nodes
+        user_prefs = self.bot.user_prefs_persistence.get_user_prefs(from_id)
+
+        if not user_prefs:
+            return False
+
+        return user_prefs.respond_to_testing

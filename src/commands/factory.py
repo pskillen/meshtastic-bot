@@ -23,9 +23,21 @@ class CommandFactory:
             "class": "src.commands.template.WhoAmI",
             "args": []
         },
+        "!prefs": {
+            "class": "src.commands.template.UserPrefsCommand",
+            "args": []
+        },
         "!admin": {
             "class": "src.commands.admin.AdminCommand",
             "args": []
+        },
+        "!enroll": {
+            "class": "src.commands.enroll.EnrollCommandHandler",
+            "args": ["enroll"]
+        },
+        "!leave": {
+            "class": "src.commands.enroll.EnrollCommandHandler",
+            "args": ["leave"]
         },
     }
 
