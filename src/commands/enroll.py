@@ -27,10 +27,10 @@ class EnrollCommandHandler(AbstractCommandWithSubcommands):
             user_prefs = UserPrefs(sender_id)
 
         # if 'enroll' mode set True, else set False
-        user_prefs.respond_to_testing = self.base_command == 'enroll'
+        user_prefs.respond_to_testing.value = self.base_command == 'enroll'
 
         self.bot.user_prefs_persistence.persist_user_prefs(sender_id, user_prefs)
 
-        response = (f"You've been {'enrolled' if user_prefs.respond_to_testing else 'unenrolled'} "
+        response = (f"You've been {'enrolled' if user_prefs.respond_to_testing.value else 'unenrolled'} "
                     f"from responses to 'test' or 'testing' in public channels.")
         self.reply(packet, response)
