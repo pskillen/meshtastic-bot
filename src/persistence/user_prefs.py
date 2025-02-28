@@ -10,7 +10,9 @@ class UserPrefs:
         _time_set: datetime
         _num_changes: int
 
-        # NB: deliberately don't have a constructor which takes all values, to prevent misuse
+        def __init__(self, value: any):
+            # NB: deliberately don't have a constructor which takes all values, to prevent misuse
+            self.value = value
 
         @property
         def time_set(self):
@@ -22,8 +24,7 @@ class UserPrefs:
 
         @classmethod
         def from_values(cls, value: any, time_set: datetime, num_changes: int):
-            pref = cls()
-            pref.value = value
+            pref = cls(value)
             pref._time_set = time_set
             pref._num_changes = num_changes
             return pref
@@ -33,7 +34,7 @@ class UserPrefs:
 
     def __init__(self, user_id: str):
         self.user_id = user_id
-        self.respond_to_testing = None
+        self.respond_to_testing = UserPrefs.Preference(False)
 
 
 class AbstractUserPrefsPersistence(abc.ABC):
