@@ -30,4 +30,4 @@ class MessageReactionResponder(AbstractResponder):
         if not user_prefs:
             return False
 
-        return user_prefs.respond_to_testing
+        return user_prefs.respond_to_testing.value

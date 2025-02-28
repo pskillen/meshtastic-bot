@@ -23,7 +23,7 @@ class TestEnrollCommandHandler(CommandWSCTestCase):
 
         self.bot.user_prefs_persistence.persist_user_prefs.assert_called_once()
         user_prefs = self.bot.user_prefs_persistence.persist_user_prefs.call_args[0][1]
-        self.assertTrue(user_prefs.respond_to_testing)
+        self.assertTrue(user_prefs.respond_to_testing.value)
 
     def test_leave_testing(self):
         command = EnrollCommandHandler(self.bot, 'leave')
@@ -34,7 +34,7 @@ class TestEnrollCommandHandler(CommandWSCTestCase):
 
         self.bot.user_prefs_persistence.persist_user_prefs.assert_called_once()
         user_prefs = self.bot.user_prefs_persistence.persist_user_prefs.call_args[0][1]
-        self.assertFalse(user_prefs.respond_to_testing)
+        self.assertFalse(user_prefs.respond_to_testing.value)
 
 
 if __name__ == '__main__':

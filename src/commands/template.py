@@ -57,5 +57,5 @@ class WhoAmI(TemplateCommand):
 class UserPrefsCommand(TemplateCommand):
     def __init__(self, bot: MeshtasticBot):
         template = ("Your user prefs are below. Change with !enroll or !leave:\n"
-                    "Reply to 'testing': {{ 'yes' if user_prefs.respond_to_testing else 'no' }}\n")
+                    "Reply to 'testing': {{ 'yes' if user_prefs.respond_to_testing.value else 'no' }}\n")
         super().__init__(bot, "prefs", template)
