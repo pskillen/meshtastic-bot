@@ -113,7 +113,7 @@ class MeshtasticBot:
         sender = packet['fromId']
         node = self.nodes.get_by_id(sender)
         if not node:
-            logging.warning(f"Received packet from unknown sender {sender}")
+            # logging.warning(f"Received packet from unknown sender {sender}")
             return
 
         if node:
