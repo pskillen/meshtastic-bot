@@ -48,9 +48,34 @@ class MeshtasticBot:
         pub.subscribe(self.on_receive_text, "meshtastic.receive.text")
         pub.subscribe(self.on_node_updated, "meshtastic.node.updated")
         pub.subscribe(self.on_connection, "meshtastic.connection.established")
-        self.interface = AutoReconnectTcpInterface(hostname=self.address)
+        self.interface = AutoReconnectTcpInterface(
+            hostname=self.address,
+            error_handler=self._handle_interface_error
+        )
 
         logging.info("Connected. Listening for messages...")
+
+    def _handle_interface_error(self, error):
+        self.disconnect()
+
+        logging.error(f"Handling interface error: {error}")
+        backoff_time = 5  # Initial back-off time in seconds
+        max_backoff_time = 300  # Maximum back-off time in seconds (5 minutes)
+
+        while True:
+            self.interface = AutoReconnectTcpInterface(
+                hostname=self.address,
+                error_handler=self._handle_interface_error
+            )
+            try:
+                self.interface.connect()
+                logging.info("Reconnected successfully")
+                break
+            except Exception as e:
+                logging.error(f"Reconnection attempt failed: {e}")
+                backoff_time = min(backoff_time * 1.5, max_backoff_time)  # Exponential back-off
+                logging.info(f"Next reconnection attempt in {backoff_time} seconds")
+                time.sleep(backoff_time)
 
     def disconnect(self):
         self.init_complete = False
@@ -106,7 +131,8 @@ class MeshtasticBot:
 
         responder = ResponderFactory.match_responder(message, self)
         if responder:
-            logging.info(f"Handling message from {sender.user.long_name if sender else from_id} with responder {responder.__class__.__name__}: {message}")
+            logging.info(
+                f"Handling message from {sender.user.long_name if sender else from_id} with responder {responder.__class__.__name__}: {message}")
             responder.handle_packet(packet)
 
     def on_receive(self, packet: MeshPacket, interface):
