@@ -63,7 +63,7 @@ class MeshtasticBot:
         my_nodenum = interface.localNode.nodeNum  # in dec
         self.my_id = f"!{hex(my_nodenum)[2:]}"
 
-        self.init_complete = False
+        self.init_complete = True
         logging.info('Connected to Meshtastic node')
         self.print_nodes()
 
