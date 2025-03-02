@@ -15,3 +15,6 @@ class HelloCommand(AbstractCommand):
 
         response = f"Hello, {sender_name}! How can I help you? (tip: try !help)"
         self.reply_to(sender_id, response)
+
+    def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):
+        return self._gcfl_just_base_command(message)

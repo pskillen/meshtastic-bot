@@ -11,6 +11,9 @@ class ConcreteCommand(AbstractCommand):
     def handle_packet(self, packet: MeshPacket) -> None:
         self.reply(packet, "Handled")
 
+    def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):
+        return self._gcfl_base_command_and_args(message)
+
 
 class ConcreteCommandWithSubcommands(AbstractCommandWithSubcommands):
     def handle_base_command(self, packet: MeshPacket, args: list[str]) -> None:
@@ -18,6 +21,9 @@ class ConcreteCommandWithSubcommands(AbstractCommandWithSubcommands):
 
     def show_help(self, packet: MeshPacket, args: list[str]) -> None:
         self.reply(packet, "Help shown")
+
+    def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):
+        return self._gcfl_base_onesub_args(message)
 
 
 class TestAbstractCommand(CommandTestCase):

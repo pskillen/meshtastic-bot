@@ -92,3 +92,6 @@ class AdminCommand(AbstractCommandWithSubcommands):
         help_text += "!admin reset packets: reset the packet counter\n"
         help_text += "!admin users (user): usage info or user history\n"
         self.reply(packet, help_text)
+
+    def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):
+        return self._gcfl_base_onesub_args(message)

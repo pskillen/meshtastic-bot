@@ -34,3 +34,6 @@ class EnrollCommandHandler(AbstractCommandWithSubcommands):
         response = (f"You've been {'enrolled' if user_prefs.respond_to_testing.value else 'unenrolled'} "
                     f"from responses to 'test' or 'testing' in public channels.")
         self.reply(packet, response)
+
+    def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):
+        return self._gcfl_base_command_and_args(message)

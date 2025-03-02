@@ -50,3 +50,6 @@ class HelpCommand(AbstractCommandWithSubcommands):
     def handle_leave(self, packet: MeshPacket, args: list[str]) -> None:
         response = "!leave: bot will not respond to you on public channels"
         self.reply(packet, response)
+
+    def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):
+        return self._gcfl_base_command_and_args(message)
