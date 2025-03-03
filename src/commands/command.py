@@ -26,11 +26,34 @@ class AbstractCommand(ABC):
         logging.debug(f"Sending response: '{message}'")
         self.bot.interface.sendText(message, destinationId=destination_id, wantAck=want_ack)
 
-    def get_command_for_logging(self, message: str) -> str:
-        words = message.split()
-        if len(words) < 2:
-            return message
-        return f"{words[0]} {words[1]}"
+    @abstractmethod
+    def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):
+        """
+        Extract the command, subcommands and arguments from a message
+        :param message:
+        :return: Tuple of command name, subcommands, and any arguments
+        """
+        pass
+
+    def _gcfl_just_base_command(self, _: str) -> (str, list[str] | None, str | None):
+        cmd = self.base_command
+        return cmd, None, None
+
+    def _gcfl_base_command_and_args(self, message: str) -> (str, list[str] | None, str | None):
+        cmd = self.base_command
+        if len(message) > len(self.base_command) + 1:
+            args = message[len(self.base_command) + 1:].strip()
+        else:
+            args = None
+
+        return cmd, None, args
+
+    def _gcfl_base_onesub_args(self, message: str) -> (str, list[str] | None, str | None):
+        tokens = message.split()
+        cmd = self.base_command
+        subcommand = [tokens[1]] if len(tokens) > 1 else None
+        args = ' '.join(tokens[2:]) if len(tokens) > 2 else None
+        return cmd, subcommand, args
 
 
 class AbstractCommandWithSubcommands(AbstractCommand, ABC):

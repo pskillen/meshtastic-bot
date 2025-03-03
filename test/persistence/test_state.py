@@ -4,7 +4,6 @@ from unittest.mock import MagicMock, patch, mock_open
 
 from src.bot import MeshtasticBot
 from src.data_classes import NodeInfoCollection, MeshNode
-from src.loggers import UserCommandLogger
 from src.persistence.state import FileBasedStatePersistence
 
 
@@ -14,11 +13,6 @@ class TestFileBasedStatePersistence(unittest.TestCase):
         self.file_path = 'test_state.json'
         self.persistence = FileBasedStatePersistence(self.file_path)
         self.bot = MagicMock(spec=MeshtasticBot)
-
-        # Initialize UserCommandLogger with some data
-        self.bot.command_logger = UserCommandLogger()
-        self.bot.command_logger.log_command('user1', 'test_command')
-        self.bot.command_logger.log_unknown_request('user1', 'unknown_command')
 
         # Initialize NodeInfoCollection with some data
         self.bot.nodes = NodeInfoCollection()
@@ -68,24 +62,16 @@ class TestFileBasedStatePersistence(unittest.TestCase):
         self.assertIn('user123', persisted_data['node_data']['nodes'])
         self.assertEqual(persisted_data['node_data']['nodes']['user123']['user']['longName'], 'Test User')
 
-        # Verify UserCommandLogger data
-        self.assertIn('command_data', persisted_data)
-        self.assertIn('user1', persisted_data['command_data']['command_stats'])
-        self.assertEqual(persisted_data['command_data']['command_stats']['user1']['test_command'], 1)
-        self.assertIn('user1', persisted_data['command_data']['unknown_command_stats'])
-        self.assertEqual(persisted_data['command_data']['unknown_command_stats']['user1']['unknown_command'], 1)
 
     @patch.object(NodeInfoCollection, 'from_dict')
-    @patch.object(UserCommandLogger, 'from_dict')
     @patch('builtins.open', new_callable=mock_open, read_data='{"nodes": {}, "commands": {}}')
     @patch('json.load')
-    def test_load_state(self, mock_json_load, mock_file_open, mock_command_logger_from_dict, mock_nodes_from_dict):
+    def test_load_state(self, mock_json_load, mock_file_open, mock_nodes_from_dict):
         mock_json_load.return_value = {"node_data": {}, "command_data": {}}
         self.persistence.load_state(self.bot)
         mock_file_open.assert_called_once_with(self.file_path, 'r')
         mock_json_load.assert_called_once_with(mock_file_open())
         mock_nodes_from_dict.assert_called_once_with({})
-        mock_command_logger_from_dict.assert_called_once_with({})
 
     @patch('builtins.open', side_effect=FileNotFoundError)
     def test_load_state_file_not_found(self, mock_file_open):

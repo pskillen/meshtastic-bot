@@ -24,12 +24,33 @@ class CommandTestCase(unittest.TestCase, ABC):
         self.test_nodes = self.test_non_admin_nodes + self.test_admin_nodes
         self.mock_interface = self.bot.interface = Mock()
 
-    def assert_message_sent(self, expected_response: str, to: MeshNode, want_ack: bool = False):
-        self.mock_interface.sendText.assert_called_once_with(
-            expected_response,
-            destinationId=to.user.id,
-            wantAck=want_ack
-        )
+    def assert_message_sent(self, expected_response: str, to: MeshNode, want_ack: bool = False, multi_response=False):
+
+        if multi_response:
+            self.mock_interface.sendText.assert_called()
+
+            # Strip the newline character from the expected response
+            expected_response = expected_response.strip()
+
+            # Assert that one of the calls matches the expected
+            for call_args in self.mock_interface.sendText.call_args_list:
+                if (call_args[1]['destinationId'] == to.user.id
+                        and call_args[1]['wantAck'] == want_ack
+                        and call_args[0][0].strip() == expected_response):
+                    return
+
+            self.fail(
+                f"Expected response with destinationId {to.user.id} and wantAck {want_ack}: \n"
+                f"{expected_response}\n"
+                f"\n"
+                f"not found in calls:\n"
+                f"{self.mock_interface.sendText.call_args_list}")
+        else:
+            self.mock_interface.sendText.assert_called_once_with(
+                expected_response,
+                destinationId=to.user.id,
+                wantAck=want_ack
+            )
 
 
 class CommandWSCTestCase(CommandTestCase):

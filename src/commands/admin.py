@@ -1,7 +1,10 @@
+import datetime
+
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
 from src.bot import MeshtasticBot
 from src.commands.command import AbstractCommandWithSubcommands
+from src.data_classes import MeshNode
 
 
 class AdminCommand(AbstractCommandWithSubcommands):
@@ -43,47 +46,91 @@ class AdminCommand(AbstractCommandWithSubcommands):
         if len(args) > 0:
             req_user_name = args[0]
             req_user = self.bot.get_node_by_short_name(req_user_name)
-
             if not req_user:
                 response = f"User '{req_user_name}' not found"
                 return self.reply(packet, response)
-
-            known_requests = self.bot.command_logger.command_stats.get(req_user.user.id)
-            unknown_requests = self.bot.command_logger.unknown_command_stats.get(req_user.user.id)
-
-            known_count = sum(known_requests.values()) if known_requests else 0
-            unknown_count = sum(unknown_requests.values()) if unknown_requests else 0
-            unknown_string = f" and {unknown_count} unknown" if unknown_count > 0 else ""
-
-            response = f"{req_user.user.long_name} made {known_count} requests{unknown_string}\n"
-            for command, count in known_requests.items():
-                response += f"- {command}: {count}\n"
-
-            if unknown_count > 0:
-                for command, count in unknown_requests.items():
-                    response += f"- {command}: {count}\n"
-
-            return self.reply(packet, response)
+            return self._show_user(packet, req_user)
 
         # otherwise, respond to '!admin users' with a list of all users
-        user_ids_valid = self.bot.command_logger.command_stats.keys()
-        user_ids_invalid = self.bot.command_logger.unknown_command_stats.keys()
-        user_ids = set(user_ids_valid).union(user_ids_invalid)
+        return self._show_users(packet)
+
+    def _show_user(self, packet: MeshPacket, req_user: MeshNode):
+        # get command history for the user since midnight 7 days ago
+        since = datetime.datetime.now() - datetime.timedelta(days=7)
+        since = since.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        command_history = self.bot.command_logger.get_command_history(
+            since=since, sender_id=req_user.user.id)
+        unknown_command_history = self.bot.command_logger.get_unknown_command_history(
+            since=since, sender_id=req_user.user.id)
+        responder_history = self.bot.command_logger.get_responder_history(
+            since=since, sender_id=req_user.user.id)
+
+        command_counts = command_history['base_command'].value_counts().to_dict()
+        responder_counts = responder_history['responder_class'].value_counts().to_dict()
+
+        known_count = sum(command_counts.values())
+        unknown_count = unknown_command_history.shape[0]
+        responder_count = sum(responder_counts.values())
+
+        response = f"{req_user.user.long_name} - {known_count} cmds, {responder_count} responders, {unknown_count} unknown cmds\n"
+        response += f"Since {since.strftime('%Y-%m-%d %H:%M:%S')}"
+        self.reply(packet, response)
+
+        if known_count > 0:
+            response = f"Commands:\n"
+            for command, count in command_counts.items():
+                response += f"- {command}: {count}\n"
+            self.reply(packet, response)
+
+        if unknown_count > 0:
+            response = "Unknown Commands:\n"
+            for _, row in unknown_command_history.iterrows():
+                response += f"- {row['message']}\n"
+            self.reply(packet, response)
+
+        if responder_count > 0:
+            response = f"Responders:\n"
+            for responder, count in responder_counts.items():
+                response += f"- {responder}: {count}\n"
+            self.reply(packet, response)
+
+    def _show_users(self, packet: MeshPacket):
+        # get command history since midnight 7 days ago
+        since = datetime.datetime.now() - datetime.timedelta(days=7)
+        since = since.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        command_history = self.bot.command_logger.get_command_history(since=since)
+        unknown_command_history = self.bot.command_logger.get_unknown_command_history(since=since)
+        responder_history = self.bot.command_logger.get_responder_history(since=since)
+
+        user_ids = (set(command_history['sender_id'])
+                    .union(set(unknown_command_history['sender_id']))
+                    .union(set(responder_history['sender_id'])))
+
+        # sort user_ids by sum of known, unknown, and responder commands. finally, sort by user_id
+        user_ids = sorted(user_ids, key=lambda user_id: (
+            command_history[command_history['sender_id'] == user_id].shape[0]
+            + unknown_command_history[unknown_command_history['sender_id'] == user_id].shape[0]
+            + responder_history[responder_history['sender_id'] == user_id].shape[0],
+            user_id
+        ))
 
         response = f"Users: {len(user_ids)}\n"
         for user_id in user_ids:
             node = self.bot.nodes.get_by_id(user_id)
             user_name = node.user.short_name if node else f"Unknown user {user_id}"
 
-            known_requests = self.bot.command_logger.command_stats.get(user_id)
-            unknown_requests = self.bot.command_logger.unknown_command_stats.get(user_id)
+            known_requests = command_history[command_history['sender_id'] == user_id]
+            unknown_requests = unknown_command_history[unknown_command_history['sender_id'] == user_id]
+            responder_requests = responder_history[responder_history['sender_id'] == user_id]
 
-            # known_requests is a dict of command -> count
-            known_request_count = sum(known_requests.values()) if known_requests else 0
-            unknown_request_count = sum(unknown_requests.values()) if unknown_requests else 0
-            total_requests = known_request_count + unknown_request_count
+            known_request_count = known_requests.shape[0]
+            unknown_request_count = unknown_requests.shape[0]
+            responder_request_count = responder_requests.shape[0]
+            # total_requests = known_request_count + unknown_request_count + responder_request_count
 
-            response += f"- {user_name}: {total_requests} requests\n"
+            response += f"- {user_name}: {known_request_count} cmds, {unknown_request_count} unk, {responder_request_count} resp\n"
 
         return self.reply(packet, response)
 
@@ -92,3 +139,6 @@ class AdminCommand(AbstractCommandWithSubcommands):
         help_text += "!admin reset packets: reset the packet counter\n"
         help_text += "!admin users (user): usage info or user history\n"
         self.reply(packet, help_text)
+
+    def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):
+        return self._gcfl_base_onesub_args(message)

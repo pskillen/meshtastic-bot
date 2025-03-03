@@ -47,12 +47,16 @@ class TemplateCommand(AbstractCommand):
             return None
         return self.bot.user_prefs_persistence.get_user_prefs(sender_id)
 
+    def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):
+        return self._gcfl_base_command_and_args(message)
+
 
 class WhoAmI(TemplateCommand):
     def __init__(self, bot: MeshtasticBot):
         template = "Hi {{ sender_id }}. You are {{ sender_long_name }} [{{ sender_short_name }}]."
         template += " You are {{ hops_away }} hops away from me. Send !prefs for your user prefs."
         super().__init__(bot, "whoami", template)
+
 
 class UserPrefsCommand(TemplateCommand):
     def __init__(self, bot: MeshtasticBot):

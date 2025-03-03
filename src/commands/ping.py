@@ -20,3 +20,6 @@ class PingCommand(AbstractCommand):
 
         response += f" (ping took {hops_away} hops)"
         self.reply(packet, response)
+
+    def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):
+        return self._gcfl_base_command_and_args(message)

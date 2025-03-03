@@ -95,3 +95,6 @@ class NodesCommand(AbstractCommandWithSubcommands):
         help_text += "!nodes busy: summary of busiest nodes\n"
         help_text += "!nodes busy detailed: detailed info about busiest nodes\n"
         self.reply(packet, help_text)
+
+    def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):
+        return self._gcfl_base_onesub_args(message)
