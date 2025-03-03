@@ -71,18 +71,6 @@ def get_test_bot(node_count=2, admin_node_count=1):
     bot.user_prefs_persistence = Mock()
 
     def add_random_stats(node_id: str):
-        #     # Add valid commands
-        #     bot.command_logger.command_stats[node_id] = {
-        #         f'cmd{random.randint(0, 10)}': random.randint(1, 10),
-        #         f'cmd{random.randint(10, 20)}': random.randint(1, 10),
-        #         f'cmd{random.randint(20, 30)}': random.randint(1, 10),
-        #     }
-        #     # Add invalid commands
-        #     bot.command_logger.unknown_command_stats[node_id] = {
-        #         f'unknown-{random.randint(0, 10)}': random.randint(1, 10),
-        #         f'unknown-{random.randint(10, 20)}': random.randint(1, 10),
-        #         f'unknown-{random.randint(20, 30)}': random.randint(1, 10),
-        #     }
         # Add packets
         bot.nodes.node_packets_today[node_id] = random.randint(1, 10)
         bot.nodes.node_packets_today_breakdown[node_id] = {
