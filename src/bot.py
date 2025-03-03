@@ -10,7 +10,7 @@ from pubsub import pub
 from src.commands.factory import CommandFactory
 from src.data_classes import MeshNode, NodeInfoCollection
 from src.helpers import pretty_print_last_heard
-from src.loggers import UserCommandLogger
+from src.persistence.commands_logger import AbstractCommandLogger
 from src.persistence.user_prefs import AbstractUserPrefsPersistence
 from src.responders.responder_factory import ResponderFactory
 from src.tcp_interface import AutoReconnectTcpInterface
@@ -24,7 +24,7 @@ class MeshtasticBot:
 
     my_id: str
     nodes: NodeInfoCollection
-    command_logger: UserCommandLogger
+    command_logger: AbstractCommandLogger
 
     user_prefs_persistence: AbstractUserPrefsPersistence
 
@@ -38,7 +38,7 @@ class MeshtasticBot:
 
         self.my_id = None
         self.nodes = NodeInfoCollection()
-        self.command_logger = UserCommandLogger()
+        self.command_logger = None
         self.user_prefs_persistence = None
 
     def connect(self):
@@ -114,8 +114,7 @@ class MeshtasticBot:
         command_name = words[0]
         command_instance = CommandFactory.create_command(command_name, self)
         if command_instance:
-            command_text = command_instance.get_command_for_logging(message)
-            self.command_logger.log_command(from_id, command_text)
+            self.command_logger.log_command(from_id, command_instance, message)
             try:
                 command_instance.handle_packet(packet)
             except Exception as e:
@@ -131,9 +130,15 @@ class MeshtasticBot:
 
         responder = ResponderFactory.match_responder(message, self)
         if responder:
-            logging.info(
-                f"Handling message from {sender.user.long_name if sender else from_id} with responder {responder.__class__.__name__}: {message}")
-            responder.handle_packet(packet)
+            try:
+                outcome = responder.handle_packet(packet)
+
+                if outcome:
+                    logging.info(
+                        f"Handled message from {sender.user.long_name if sender else from_id} with responder {responder.__class__.__name__}: {message}")
+                    self.command_logger.log_responder_handled(from_id, responder, message)
+            except Exception as e:
+                logging.error(f"Error handling message: {e}")
 
     def on_receive(self, packet: MeshPacket, interface):
         sender = packet['fromId']

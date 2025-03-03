@@ -51,8 +51,8 @@ class AbstractCommand(ABC):
     def _gcfl_base_onesub_args(self, message: str) -> (str, list[str] | None, str | None):
         tokens = message.split()
         cmd = self.base_command
-        subcommand = tokens[1] if len(tokens) > 1 else None
-        args = tokens[2:] if len(tokens) > 2 else None
+        subcommand = [tokens[1]] if len(tokens) > 1 else None
+        args = ' '.join(tokens[2:]) if len(tokens) > 2 else None
         return cmd, subcommand, args
 
 

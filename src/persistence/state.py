@@ -11,12 +11,10 @@ class AbstractStatePersistence(ABC):
     def get_state(self, bot: MeshtasticBot) -> dict:
         return {
             'node_data': bot.nodes.to_dict(),
-            'command_data': bot.command_logger.to_dict(),
         }
 
     def import_state(self, bot: MeshtasticBot, data: dict):
         bot.nodes.from_dict(data['node_data'])
-        bot.command_logger.from_dict(data['command_data'])
 
     @abc.abstractmethod
     def persist_state(self, bot: MeshtasticBot):

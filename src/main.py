@@ -5,6 +5,7 @@ import sys
 from dotenv import load_dotenv
 
 from src.bot import MeshtasticBot
+from src.persistence.commands_logger import SqliteCommandLogger
 from src.persistence.state import FileBasedStatePersistence
 from src.persistence.user_prefs import SqliteUserPrefsPersistence
 
@@ -32,7 +33,8 @@ def main():
     # Connect to the Meshtastic node over WiFi
     bot = MeshtasticBot(MESHTASTIC_IP)
     bot.admin_nodes = ADMIN_NODES
-    bot.user_prefs_persistence = SqliteUserPrefsPersistence('user_prefs.db')
+    bot.user_prefs_persistence = SqliteUserPrefsPersistence('user_prefs.sqlite')
+    bot.command_logger = SqliteCommandLogger('user_cmds.sqlite')
 
     try:
         state_persistence.load_state(bot)

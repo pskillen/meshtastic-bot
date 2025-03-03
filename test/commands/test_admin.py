@@ -1,6 +1,11 @@
+import datetime
 import unittest
+from unittest.mock import MagicMock
+
+import pandas as pd
 
 from src.commands.admin import AdminCommand
+from src.data_classes import MeshNode
 from test.commands import CommandWSCTestCase
 from test.test_setup_data import build_test_text_packet
 
@@ -11,6 +16,35 @@ class TestAdminCommand(CommandWSCTestCase):
     def setUp(self):
         super().setUp()
         self.command = AdminCommand(self.bot)
+
+        # sort test_nodes by user_id so we can predict the order of the responses
+        self.test_nodes = sorted(self.test_nodes, key=lambda x: x.user.id)
+        self._setup_nodes_mock_data(self.test_nodes)
+
+    def _setup_nodes_mock_data(self, node_list: list[MeshNode]):
+        # Create mock command history using test nodes
+        # each test_node gets 2 commands, 1 unknown command, and 2 responders
+        self.mock_command_history = pd.DataFrame({
+            'sender_id': [node.user.id for node in node_list for _ in range(2)],
+            'base_command': ['cmd1', 'cmd2'] * len(node_list),
+            'timestamp': [datetime.datetime.now() - datetime.timedelta(days=i) for i in range(2 * len(node_list))]
+        })
+
+        self.mock_unknown_command_history = pd.DataFrame({
+            'sender_id': [node.user.id for node in node_list],
+            'message': ['unknown1', 'unknown2', 'unknown3'][:len(node_list)],
+            'timestamp': [datetime.datetime.now() - datetime.timedelta(days=i) for i in range(len(node_list))]
+        })
+
+        self.mock_responder_history = pd.DataFrame({
+            'sender_id': [node.user.id for node in node_list for _ in range(2)],
+            'responder_class': ['Responder1', 'Responder2'] * len(node_list),
+            'timestamp': [datetime.datetime.now() - datetime.timedelta(days=i) for i in range(2 * len(node_list))]
+        })
+
+        self.bot.command_logger.get_command_history = MagicMock(return_value=self.mock_command_history)
+        self.bot.command_logger.get_unknown_command_history = MagicMock(return_value=self.mock_unknown_command_history)
+        self.bot.command_logger.get_responder_history = MagicMock(return_value=self.mock_responder_history)
 
     def test_handle_packet_not_authorized(self):
         packet = build_test_text_packet('!admin', self.test_non_admin_nodes[0].user.id, self.bot.my_id)
@@ -76,40 +110,43 @@ class TestAdminCommand(CommandWSCTestCase):
     def test_show_users_user_found(self):
         target_node = self.test_nodes[1]  # 0 is my_id
 
+        self._setup_nodes_mock_data([target_node])
+        midnight_7_days_ago = datetime.datetime.now() - datetime.timedelta(days=7)
+        midnight_7_days_ago = midnight_7_days_ago.replace(hour=0, minute=0, second=0, microsecond=0)
+
         packet = build_test_text_packet(f'!admin users {target_node.user.short_name}',
                                         self.test_admin_nodes[0].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
 
-        # Infer the expected response from the test data
-        command_stats = self.bot.command_logger.command_stats.get(target_node.user.id, {})
-        unknown_command_stats = self.bot.command_logger.unknown_command_stats.get(target_node.user.id, {})
+        summary_response = f"{target_node.user.long_name} - 2 cmds, 2 responders, 1 unknown cmds\n"
+        summary_response += f"Since {midnight_7_days_ago.strftime('%Y-%m-%d %H:%M:%S')}"
+        self.assert_message_sent(summary_response, self.test_admin_nodes[0], multi_response=True)
 
-        expected_response = f"{target_node.user.long_name} made {sum(command_stats.values())} requests and {sum(unknown_command_stats.values())} unknown\n"
-        for cmd, count in command_stats.items():
-            expected_response += f"- {cmd}: {count}\n"
-        for cmd, count in unknown_command_stats.items():
-            expected_response += f"- {cmd}: {count}\n"
+        known_commands_response = "Commands:\n"
+        known_commands_response += "- cmd1: 1\n"
+        known_commands_response += "- cmd2: 1\n"
+        self.assert_message_sent(known_commands_response, self.test_admin_nodes[0], multi_response=True)
 
-        self.assert_message_sent(
-            expected_response,
-            self.test_admin_nodes[0]
-        )
+        unknown_commands_response = "Unknown Commands:\n"
+        unknown_commands_response += "- unknown1\n"
+        self.assert_message_sent(unknown_commands_response, self.test_admin_nodes[0], multi_response=True)
+
+        responders_response = "Responders:\n"
+        responders_response += "- Responder1: 1\n"
+        responders_response += "- Responder2: 1\n"
+        self.assert_message_sent(responders_response, self.test_admin_nodes[0], multi_response=True)
 
     def test_show_users_all_users(self):
         packet = build_test_text_packet('!admin users', self.test_admin_nodes[0].user.id, self.bot.my_id)
         self.command.handle_packet(packet)
 
-        # Infer the expected response from the test data
         expected_response = f"Users: {len(self.test_nodes)}\n"
-
-        user_ids = set(self.bot.command_logger.command_stats.keys()).union(
-            self.bot.command_logger.unknown_command_stats.keys())
-
-        for node_id in user_ids:
-            node = self.bot.nodes.get_by_id(node_id)
-            request_count = sum(self.bot.command_logger.command_stats.get(node_id, {}).values()) \
-                            + sum(self.bot.command_logger.unknown_command_stats.get(node_id, {}).values())
-            expected_response += f"- {node.user.short_name}: {request_count} requests\n"
+        for node in self.test_nodes:
+            user_name = node.user.short_name
+            known_count = 2
+            unk_count = 1
+            resp_count = 2
+            expected_response += f"- {user_name}: {known_count} cmds, {unk_count} unk, {resp_count} resp\n"
 
         self.assert_message_sent(
             expected_response,
