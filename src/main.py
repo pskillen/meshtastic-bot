@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 
 from src.bot import MeshtasticBot
 from src.persistence.commands_logger import SqliteCommandLogger
-from src.persistence.state import FileBasedStatePersistence
+from src.persistence.node_info import InMemoryNodeInfoStore
+from src.persistence.node_db import SqliteNodeDB
 from src.persistence.user_prefs import SqliteUserPrefsPersistence
 
 # Load environment variables from .env file
@@ -34,21 +35,22 @@ def main():
     data_dir = os.path.join(Path(__file__).parent.parent, DATA_DIR)
     os.makedirs(data_dir, exist_ok=True)
     data_dir = Path(data_dir)
-    state_file = data_dir / 'all_state.json'
     user_prefs_file = data_dir / 'user_prefs.sqlite'
     command_log_file = data_dir / 'user_cmds.sqlite'
-
-    # Create a state persistence object
-    state_persistence = FileBasedStatePersistence(str(state_file))
+    node_db_file = data_dir / 'node_db.sqlite'
+    node_info_file = data_dir / 'node_info.json'
 
     # Connect to the Meshtastic node over WiFi
     bot = MeshtasticBot(MESHTASTIC_IP)
     bot.admin_nodes = ADMIN_NODES
     bot.user_prefs_persistence = SqliteUserPrefsPersistence(str(user_prefs_file))
     bot.command_logger = SqliteCommandLogger(str(command_log_file))
+    bot.node_db = SqliteNodeDB(str(node_db_file))
+    node_info = InMemoryNodeInfoStore()
+    bot.node_info = node_info
 
     try:
-        state_persistence.load_state(bot)
+        node_info.load_from_file(str(node_info_file))
         bot.connect()
         bot.start_scheduler()
 
@@ -56,7 +58,7 @@ def main():
         logging.error(f"Error: {e}")
     finally:
         bot.disconnect()
-        state_persistence.persist_state(bot)
+        node_info.persist_to_file(str(node_info_file))
 
 
 if __name__ == "__main__":
