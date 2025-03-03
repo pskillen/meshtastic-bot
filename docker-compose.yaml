@@ -1,0 +1,24 @@
+---
+
+services:
+  meshtastic-bot:
+    image: ghcr.io/pskillen/meshtastic-bot:latest
+    build:
+      context: "./"
+    container_name: meshtastic-bot
+    restart: always
+    environment:
+      - MESHTASTIC_IP=meshtastic.local
+      - ADMIN_NODES='!aae8900d'  # Change this, unless you want me to be the admin of your bot
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - watchtower
+
+  watchtower:
+    image: containrrr/watchtower
+    container_name: watchtower
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 3600 meshtastic-bot  # Check for updates every hour

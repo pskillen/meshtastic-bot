@@ -1,0 +1,29 @@
+# Python stuff
+venv/
+__pycache__/
+
+# Runtime stuff
+*.sqlite
+*.sqlite3
+all_state.json
+data/
+
+# Deployment stuff
+deploy/
+.github
+.gitignore
+.rsyncignore
+Dockerfile
+.dockerignore
+TODO.md
+
+# Tests
+test/
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Secrets
+.env
