@@ -37,7 +37,12 @@ jobs:
           docker build -t ghcr.io/${{ github.repository }}:${{ env.TAG }} .
           docker push ghcr.io/${{ github.repository }}:${{ env.TAG }}
 
-      - name: Tag as Latest
+      - name: Tag as Latest or RC
         run: |
-          docker tag ghcr.io/${{ github.repository }}:${{ env.TAG }} ghcr.io/${{ github.repository }}:latest
-          docker push ghcr.io/${{ github.repository }}:latest
+          if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
+            docker tag ghcr.io/${{ github.repository }}:${{ env.TAG }} ghcr.io/${{ github.repository }}:rc
+            docker push ghcr.io/${{ github.repository }}:rc
+          else
+            docker tag ghcr.io/${{ github.repository }}:${{ env.TAG }} ghcr.io/${{ github.repository }}:latest
+            docker push ghcr.io/${{ github.repository }}:latest
+          fi
