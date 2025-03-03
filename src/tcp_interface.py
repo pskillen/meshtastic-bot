@@ -1,10 +1,15 @@
 import logging
 import time
+from typing import Optional, Callable
 
 from meshtastic.tcp_interface import TCPInterface
 
 
 class AutoReconnectTcpInterface(TCPInterface):
+    def __init__(self, *args, error_handler: Optional[Callable[[Exception], None]] = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.error_handler = error_handler
+
     def sendHeartbeat(self):
         try:
             super().sendHeartbeat()
@@ -14,17 +19,17 @@ class AutoReconnectTcpInterface(TCPInterface):
 
     def reconnect(self):
         logging.info("Attempting to reconnect...")
-        backoff_time = 5  # Initial back-off time in seconds
-        max_backoff_time = 300  # Maximum back-off time in seconds (5 minutes)
+        try:
+            self.close()
+        except Exception as e:
+            logging.warning(
+                f"Failed to close connection. "
+                f"This might not be an issue since we've already disconnected: {e}")
 
-        while True:
-            try:
-                self.close()
-                self.connect()
-                logging.info("Reconnected successfully")
-                break
-            except Exception as e:
-                logging.error(f"Reconnection attempt failed: {e}")
-                backoff_time = min(backoff_time * 1.5, max_backoff_time)  # Exponential back-off
-                logging.info(f"Next reconnection attempt in {backoff_time} seconds")
-                time.sleep(backoff_time)
+        try:
+            self.connect()
+            logging.info("Reconnected successfully")
+        except Exception as e:
+            logging.error(f"Reconnection attempt failed: {e}")
+            if self.error_handler:
+                self.error_handler(e)
