@@ -5,6 +5,7 @@
 state.json
 nodes.json
 all_state.json
+data/
 
 ### Python template
 # Byte-compiled / optimized / DLL files

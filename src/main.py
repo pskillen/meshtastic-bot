@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -15,6 +16,7 @@ load_dotenv()
 # Get the IP address and admin nodes from environment variables
 MESHTASTIC_IP = os.getenv("MESHTASTIC_IP")
 ADMIN_NODES = os.getenv("ADMIN_NODES").split(',')
+DATA_DIR = os.getenv("DATA_DIR", "data")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,
@@ -28,13 +30,22 @@ logging.getLogger('mesh_interface').setLevel(logging.WARNING)
 
 
 def main():
-    state_persistence = FileBasedStatePersistence('all_state.json')
+    # Ensure data dir exists
+    data_dir = os.path.join(Path(__file__).parent.parent, DATA_DIR)
+    os.makedirs(data_dir, exist_ok=True)
+    data_dir = Path(data_dir)
+    state_file = data_dir / 'all_state.json'
+    user_prefs_file = data_dir / 'user_prefs.sqlite'
+    command_log_file = data_dir / 'user_cmds.sqlite'
+
+    # Create a state persistence object
+    state_persistence = FileBasedStatePersistence(str(state_file))
 
     # Connect to the Meshtastic node over WiFi
     bot = MeshtasticBot(MESHTASTIC_IP)
     bot.admin_nodes = ADMIN_NODES
-    bot.user_prefs_persistence = SqliteUserPrefsPersistence('user_prefs.sqlite')
-    bot.command_logger = SqliteCommandLogger('user_cmds.sqlite')
+    bot.user_prefs_persistence = SqliteUserPrefsPersistence(str(user_prefs_file))
+    bot.command_logger = SqliteCommandLogger(str(command_log_file))
 
     try:
         state_persistence.load_state(bot)
