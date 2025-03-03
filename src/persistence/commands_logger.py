@@ -1,6 +1,6 @@
 import abc
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pandas as pd
 
@@ -76,7 +76,7 @@ class SqliteCommandLogger(AbstractCommandLogger):
             cursor.execute('''
                 INSERT INTO command_log (sender_id, base_command, sub_commands, args, timestamp, handler_class)
                 VALUES (?, ?, ?, ?, ?, ?)
-            ''', (sender_id, base_cmd, subcommands_str, args, datetime.now().isoformat(),
+            ''', (sender_id, base_cmd, subcommands_str, args, datetime.now(timezone.utc).isoformat(),
                   command_instance.__class__.__name__))
             conn.commit()
 
@@ -86,7 +86,7 @@ class SqliteCommandLogger(AbstractCommandLogger):
             cursor.execute('''
                 INSERT INTO responder_log (sender_id, message, timestamp, responder_class)
                 VALUES (?, ?, ?, ?)
-            ''', (sender_id, message_text, datetime.now().isoformat(), responder_instance.__class__.__name__))
+            ''', (sender_id, message_text, datetime.now(timezone.utc).isoformat(), responder_instance.__class__.__name__))
             conn.commit()
 
     def log_unknown_request(self, sender_id: str, message: str) -> None:
@@ -95,7 +95,7 @@ class SqliteCommandLogger(AbstractCommandLogger):
             cursor.execute('''
                 INSERT INTO unknown_requests (sender_id, message, timestamp)
                 VALUES (?, ?, ?)
-            ''', (sender_id, message, datetime.now().isoformat()))
+            ''', (sender_id, message, datetime.now(timezone.utc).isoformat()))
             conn.commit()
 
     def get_command_history(self, since: datetime, sender_id: str = None) -> pd.DataFrame:

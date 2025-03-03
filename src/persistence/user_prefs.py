@@ -1,7 +1,7 @@
 import abc
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class UserPrefs:
@@ -114,13 +114,13 @@ class SqliteUserPrefsPersistence(AbstractUserPrefsPersistence):
                     old_value, old_num_changes = row
                     if old_value != str(preference.value):
                         num_changes = preference.num_changes + 1
-                        time_set = datetime.now()
+                        time_set = datetime.now(timezone.utc)
                     else:
                         num_changes = preference.num_changes
                         time_set = preference.time_set
                 else:
                     num_changes = 0
-                    time_set = datetime.now()
+                    time_set = datetime.now(timezone.utc)
 
                 # Store this value
                 cursor.execute('''

@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timedelta, timezone
 import unittest
 from unittest.mock import MagicMock
 
@@ -27,19 +27,19 @@ class TestAdminCommand(CommandWSCTestCase):
         self.mock_command_history = pd.DataFrame({
             'sender_id': [node.user.id for node in node_list for _ in range(2)],
             'base_command': ['cmd1', 'cmd2'] * len(node_list),
-            'timestamp': [datetime.datetime.now() - datetime.timedelta(days=i) for i in range(2 * len(node_list))]
+            'timestamp': [datetime.now(timezone.utc) - timedelta(days=i) for i in range(2 * len(node_list))]
         })
 
         self.mock_unknown_command_history = pd.DataFrame({
             'sender_id': [node.user.id for node in node_list],
             'message': ['unknown1', 'unknown2', 'unknown3'][:len(node_list)],
-            'timestamp': [datetime.datetime.now() - datetime.timedelta(days=i) for i in range(len(node_list))]
+            'timestamp': [datetime.now(timezone.utc) - timedelta(days=i) for i in range(len(node_list))]
         })
 
         self.mock_responder_history = pd.DataFrame({
             'sender_id': [node.user.id for node in node_list for _ in range(2)],
             'responder_class': ['Responder1', 'Responder2'] * len(node_list),
-            'timestamp': [datetime.datetime.now() - datetime.timedelta(days=i) for i in range(2 * len(node_list))]
+            'timestamp': [datetime.now(timezone.utc) - timedelta(days=i) for i in range(2 * len(node_list))]
         })
 
         self.bot.command_logger.get_command_history = MagicMock(return_value=self.mock_command_history)
@@ -75,8 +75,8 @@ class TestAdminCommand(CommandWSCTestCase):
         self.command.handle_packet(packet)
 
         # Check that the packet counters have been reset
-        self.assertEqual(self.bot.nodes.node_packets_today, {})
-        self.assertEqual(self.bot.nodes.node_packets_today_breakdown, {})
+        self.assertEqual(self.bot.node_info.get_all_nodes_packets_today(), {})
+        self.assertEqual(self.bot.node_info.get_all_nodes_packets_today_breakdown(), {})
 
         self.assert_message_sent(
             "Packet counter reset",
@@ -111,7 +111,7 @@ class TestAdminCommand(CommandWSCTestCase):
         target_node = self.test_nodes[1]  # 0 is my_id
 
         self._setup_nodes_mock_data([target_node])
-        midnight_7_days_ago = datetime.datetime.now() - datetime.timedelta(days=7)
+        midnight_7_days_ago = datetime.now(timezone.utc) - timedelta(days=7)
         midnight_7_days_ago = midnight_7_days_ago.replace(hour=0, minute=0, second=0, microsecond=0)
 
         packet = build_test_text_packet(f'!admin users {target_node.user.short_name}',

@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone, timedelta
 import os
 import sqlite3
 import unittest
@@ -70,7 +70,7 @@ class TestSqliteCommandLogger(unittest.TestCase):
         command_instance.get_command_for_logging.return_value = ('base_cmd', ['sub_cmd1', 'sub_cmd2'], 'arg1 arg2')
         self.logger.log_command('sender1', command_instance, 'message')
 
-        since = datetime.datetime.now() - datetime.timedelta(days=1)
+        since = datetime.now(timezone.utc) - timedelta(days=1)
         history = self.logger.get_command_history(since=since)
         self.assertFalse(history.empty)
         self.assertIn('sender_id', history.columns)
@@ -80,7 +80,7 @@ class TestSqliteCommandLogger(unittest.TestCase):
     def test_get_unknown_command_history(self):
         self.logger.log_unknown_request('sender1', 'unknown message')
 
-        since = datetime.datetime.now() - datetime.timedelta(days=1)
+        since = datetime.now(timezone.utc) - timedelta(days=1)
         history = self.logger.get_unknown_command_history(since=since)
         self.assertFalse(history.empty)
         self.assertIn('sender_id', history.columns)
@@ -91,7 +91,7 @@ class TestSqliteCommandLogger(unittest.TestCase):
         responder_instance = MagicMock(spec=AbstractResponder)
         self.logger.log_responder_handled('sender1', responder_instance, 'response message')
 
-        since = datetime.datetime.now() - datetime.timedelta(days=1)
+        since = datetime.now(timezone.utc) - timedelta(days=1)
         history = self.logger.get_responder_history(since=since)
         self.assertFalse(history.empty)
         self.assertIn('sender_id', history.columns)

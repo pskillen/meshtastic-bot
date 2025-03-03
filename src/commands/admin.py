@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone, timedelta
 
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
@@ -18,8 +18,8 @@ class AdminCommand(AbstractCommandWithSubcommands):
 
         # Only allow admin nodes to use this command
         if sender not in self.bot.admin_nodes:
-            node = self.bot.nodes.get_by_id(sender)
-            response = f"Sorry {node.user.long_name}, you are not authorized to use this command"
+            node = self.bot.node_db.get_by_id(sender)
+            response = f"Sorry {node.long_name}, you are not authorized to use this command"
             self.reply_to(sender, response)
         else:
             super().handle_packet(packet)
@@ -34,7 +34,7 @@ class AdminCommand(AbstractCommandWithSubcommands):
         if not args or len(args) == 0:
             response = f"reset: Missing argument - options are: {available_options}"
         elif args[0] == 'packets':
-            self.bot.nodes.reset_packets_today()
+            self.bot.node_info.reset_packets_today()
             response = 'Packet counter reset'
         else:
             response = f"reset: Unknown argument '{args[0]}' - options are: {available_options}"
@@ -54,17 +54,17 @@ class AdminCommand(AbstractCommandWithSubcommands):
         # otherwise, respond to '!admin users' with a list of all users
         return self._show_users(packet)
 
-    def _show_user(self, packet: MeshPacket, req_user: MeshNode):
+    def _show_user(self, packet: MeshPacket, req_user: MeshNode.User):
         # get command history for the user since midnight 7 days ago
-        since = datetime.datetime.now() - datetime.timedelta(days=7)
+        since = datetime.now(timezone.utc) - timedelta(days=7)
         since = since.replace(hour=0, minute=0, second=0, microsecond=0)
 
         command_history = self.bot.command_logger.get_command_history(
-            since=since, sender_id=req_user.user.id)
+            since=since, sender_id=req_user.id)
         unknown_command_history = self.bot.command_logger.get_unknown_command_history(
-            since=since, sender_id=req_user.user.id)
+            since=since, sender_id=req_user.id)
         responder_history = self.bot.command_logger.get_responder_history(
-            since=since, sender_id=req_user.user.id)
+            since=since, sender_id=req_user.id)
 
         command_counts = command_history['base_command'].value_counts().to_dict()
         responder_counts = responder_history['responder_class'].value_counts().to_dict()
@@ -73,7 +73,7 @@ class AdminCommand(AbstractCommandWithSubcommands):
         unknown_count = unknown_command_history.shape[0]
         responder_count = sum(responder_counts.values())
 
-        response = f"{req_user.user.long_name} - {known_count} cmds, {responder_count} responders, {unknown_count} unknown cmds\n"
+        response = f"{req_user.long_name} - {known_count} cmds, {responder_count} responders, {unknown_count} unknown cmds\n"
         response += f"Since {since.strftime('%Y-%m-%d %H:%M:%S')}"
         self.reply(packet, response)
 
@@ -97,7 +97,7 @@ class AdminCommand(AbstractCommandWithSubcommands):
 
     def _show_users(self, packet: MeshPacket):
         # get command history since midnight 7 days ago
-        since = datetime.datetime.now() - datetime.timedelta(days=7)
+        since = datetime.now(timezone.utc) - timedelta(days=7)
         since = since.replace(hour=0, minute=0, second=0, microsecond=0)
 
         command_history = self.bot.command_logger.get_command_history(since=since)
@@ -118,8 +118,8 @@ class AdminCommand(AbstractCommandWithSubcommands):
 
         response = f"Users: {len(user_ids)}\n"
         for user_id in user_ids:
-            node = self.bot.nodes.get_by_id(user_id)
-            user_name = node.user.short_name if node else f"Unknown user {user_id}"
+            node = self.bot.node_db.get_by_id(user_id)
+            user_name = node.short_name if node else f"Unknown user {user_id}"
 
             known_requests = command_history[command_history['sender_id'] == user_id]
             unknown_requests = unknown_command_history[unknown_command_history['sender_id'] == user_id]
