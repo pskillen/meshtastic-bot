@@ -1,4 +1,5 @@
-FROM python:3.12
+ARG BASE_IMAGE=python:3.12
+FROM ${BASE_IMAGE}
 
 WORKDIR /app
 
