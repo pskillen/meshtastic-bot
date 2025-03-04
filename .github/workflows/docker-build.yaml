@@ -25,6 +25,10 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
+    strategy:
+      matrix:
+        platform: [ linux/amd64, linux/arm/v7, linux/arm64 ]
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -35,10 +39,10 @@ jobs:
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
 
-      - name: Build and Push Multi-Arch Docker Image
+      - name: Build and Push Docker Image
         run: |
           docker buildx build \
-            --platform linux/amd64,linux/arm/v7,linux/arm64 \
+            --platform ${{ matrix.platform }} \
             -t ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }} \
             --push .
 
