@@ -43,6 +43,7 @@ jobs:
             --push .
 
       - name: Tag as Latest or RC
+        if: ${{ inputs.IS_LATEST == true }}
         run: |
           if [[ "${{ inputs.IS_PRERELEASE }}" == "true" ]]; then
             docker tag ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }} ghcr.io/${{ github.repository }}:rc
@@ -51,5 +52,3 @@ jobs:
             docker tag ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }} ghcr.io/${{ github.repository }}:latest
             docker push ghcr.io/${{ github.repository }}:latest
           fi
-        if:
-          - inputs.IS_LATEST == "true"
