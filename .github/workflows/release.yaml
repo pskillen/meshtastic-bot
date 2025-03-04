@@ -29,4 +29,4 @@ jobs:
     with:
       VERSION_TAG: ${{ needs.extract-tag.outputs.VERSION_TAG }}
       IS_PRERELEASE: ${{ needs.extract-tag.outputs.IS_PRERELEASE }}
-      IS_LATEST: true
+      IS_LATEST: "true"
