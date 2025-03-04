@@ -28,5 +28,5 @@ jobs:
     uses: ./.github/workflows/docker-build.yaml
     with:
       VERSION_TAG: ${{ needs.extract-tag.outputs.VERSION_TAG }}
-      IS_PRERELEASE: ${{ needs.extract-tag.outputs.IS_PRERELEASE }}
-      IS_LATEST: "true"
+      IS_PRERELEASE: ${{ fromJson(needs.extract-tag.outputs.IS_PRERELEASE) }}  # must be boolean
+      IS_LATEST: true
