@@ -39,20 +39,43 @@ jobs:
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
 
+      - name: Setup vars
+        run: |
+          PLATFORM_TAG=$(echo "${{ matrix.platform }}" | sed 's|/|-|g')
+          echo "TAG=${{ inputs.VERSION_TAG }}-$PLATFORM_TAG" >> $GITHUB_ENV
+
       - name: Build and Push Docker Image
         run: |
           docker buildx build \
             --platform ${{ matrix.platform }} \
-            -t ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }} \
+            -t ghcr.io/${{ github.repository }}:${{ env.TAG }} \
             --push .
+
+  create-manifest:
+    runs-on: ubuntu-latest
+    needs:
+      - build-and-push
+
+    steps:
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+      - name: Create and Push Multi-Arch Manifest
+        run: |
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }} \
+            ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}-linux-amd64 \
+            ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}-linux-arm-v7 \
+            ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}-linux-arm64 
 
       - name: Tag as Latest or RC
         if: ${{ inputs.IS_LATEST == true }}
         run: |
           if [[ "${{ inputs.IS_PRERELEASE }}" == "true" ]]; then
-            docker tag ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }} ghcr.io/${{ github.repository }}:latest-rc
-            docker push ghcr.io/${{ github.repository }}:latest-rc
+            docker buildx imagetools create \
+              -t ghcr.io/${{ github.repository }}:latest-rc \
+              ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}
           else
-            docker tag ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }} ghcr.io/${{ github.repository }}:latest
-            docker push ghcr.io/${{ github.repository }}:latest
-          fi
+            docker buildx imagetools create \
+              -t ghcr.io/${{ github.repository }}:latest \
+              ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}
