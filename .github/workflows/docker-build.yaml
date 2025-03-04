@@ -3,14 +3,23 @@ name: docker-build-and-push
 on:
   workflow_call:
     inputs:
-      TAG:
+      VERSION_TAG:
         required: true
         type: string
+      IS_LATEST:
+        required: false
+        type: boolean
+        default: false
+      IS_PRERELEASE:
+        required: false
+        type: boolean
+        default: false
 
 
 permissions:
   contents: read
   packages: write
+
 
 jobs:
   build-and-push:
@@ -26,17 +35,21 @@ jobs:
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
 
-      - name: Build and Push Docker Image
+      - name: Build and Push Multi-Arch Docker Image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:${{ env.TAG }} .
-          docker push ghcr.io/${{ github.repository }}:${{ env.TAG }}
+          docker buildx build \
+            --platform linux/amd64,linux/arm/v7,linux/arm64 \
+            -t ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }} \
+            --push .
 
       - name: Tag as Latest or RC
         run: |
-          if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
-            docker tag ghcr.io/${{ github.repository }}:${{ env.TAG }} ghcr.io/${{ github.repository }}:rc
+          if [[ "${{ inputs.IS_PRERELEASE }}" == "true" ]]; then
+            docker tag ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }} ghcr.io/${{ github.repository }}:rc
             docker push ghcr.io/${{ github.repository }}:rc
           else
-            docker tag ghcr.io/${{ github.repository }}:${{ env.TAG }} ghcr.io/${{ github.repository }}:latest
+            docker tag ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }} ghcr.io/${{ github.repository }}:latest
             docker push ghcr.io/${{ github.repository }}:latest
           fi
+        if:
+          - inputs.IS_LATEST == "true"

@@ -5,18 +5,23 @@ on:
     types: [ published ]
 
 jobs:
-  UnitTest:
+  unit-tests:
     uses: ./.github/workflows/unit-tests.yaml
 
   extract-tag:
     steps:
       - name: Extract Release Tag
         id: get_tag
-        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+        run: |
+          echo "VERSION_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          echo "IS_PRERELEASE=${{ github.event.release.prerelease }}" >> $GITHUB_ENV
 
   build-and-push:
     needs:
-      - UnitTest
+      - unit-tests
+      - extract-tag
     uses: ./.github/workflows/docker-build.yaml
-    inputs:
-      TAG: ${{ env.TAG }}
+    with:
+      VERSION_TAG: ${{ env.VERSION_TAG }}
+      IS_PRERELEASE: ${{ env.IS_PRERELEASE }}
+      IS_LATEST: true
