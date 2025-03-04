@@ -9,12 +9,17 @@ jobs:
     uses: ./.github/workflows/unit-tests.yaml
 
   extract-tag:
+    runs-on: ubuntu-latest
     steps:
       - name: Extract Release Tag
         id: get_tag
         run: |
-          echo "VERSION_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
-          echo "IS_PRERELEASE=${{ github.event.release.prerelease }}" >> $GITHUB_ENV
+          echo "VERSION_TAG=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          echo "IS_PRERELEASE=${{ github.event.release.prerelease }}" >> "$GITHUB_OUTPUT"
+
+    outputs:
+      VERSION_TAG: ${{ steps.get_tag.outputs.VERSION_TAG }}
+      IS_PRERELEASE: ${{ steps.get_tag.outputs.IS_PRERELEASE }}
 
   build-and-push:
     needs:
@@ -22,6 +27,6 @@ jobs:
       - extract-tag
     uses: ./.github/workflows/docker-build.yaml
     with:
-      VERSION_TAG: ${{ env.VERSION_TAG }}
-      IS_PRERELEASE: ${{ env.IS_PRERELEASE }}
+      VERSION_TAG: ${{ needs.extract-tag.outputs.VERSION_TAG }}
+      IS_PRERELEASE: ${{ needs.extract-tag.outputs.IS_PRERELEASE }}
       IS_LATEST: true
