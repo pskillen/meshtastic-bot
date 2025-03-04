@@ -63,11 +63,11 @@ class MeshtasticBot:
         max_backoff_time = 300  # Maximum back-off time in seconds (5 minutes)
 
         while True:
-            self.interface = AutoReconnectTcpInterface(
-                hostname=self.address,
-                error_handler=self._handle_interface_error
-            )
             try:
+                self.interface = AutoReconnectTcpInterface(
+                    hostname=self.address,
+                    error_handler=self._handle_interface_error
+                )
                 self.interface.connect()
                 logging.info("Reconnected successfully")
                 break
