@@ -35,7 +35,7 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           docker buildx build \
-            --platform arm32v7/python:3.12 \
+            --platform linux/arm/v7 \
             --build-arg PYTHON_VERSION=${{ inputs.PYTHON_VERSION }} \
             --build-arg PANDAS_VERSION=${{ inputs.PANDAS_VERSION }} \
             -t ghcr.io/${{ github.repository }}-armv7-base:py${{ inputs.PYTHON_VERSION }}-pa${{ inputs.PANDAS_VERSION }} \
