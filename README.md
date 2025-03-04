@@ -22,6 +22,11 @@ commands, and responds with appropriate actions.
     pip install -r requirements.txt
     ```
 
+3. If installing on a Raspberry Pi you may need to install the following packages:
+    ```sh
+    sudo apt-get install libopenblas-dev
+    ```
+
 ## Usage
 
 1. Copy .env.example to .env and fill in the required values.

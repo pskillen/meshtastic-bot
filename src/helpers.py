@@ -1,3 +1,5 @@
+import string
+import urllib.parse
 from datetime import datetime, timezone
 
 
@@ -16,3 +18,10 @@ def pretty_print_last_heard(last_heard_timestamp: int) -> str:
         return f"{minutes}m ago"
     else:
         return f"{delta.seconds}s ago"
+
+
+_safe_chars = string.ascii_letters + string.digits + ' @\/.,-:"\''
+
+
+def safe_encode_node_name(name):
+    return ''.join(c if c in _safe_chars else urllib.parse.quote(c) for c in name)
