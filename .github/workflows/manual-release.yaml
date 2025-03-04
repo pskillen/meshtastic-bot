@@ -25,5 +25,5 @@ jobs:
     uses: ./.github/workflows/docker-build.yaml
     with:
       VERSION_TAG: ${{ inputs.VERSION_TAG }}
-      IS_PRERELEASE: ${{ inpus.IS_PRERELEASE }}
+      IS_PRERELEASE: ${{ inputs.IS_PRERELEASE }}
       IS_LATEST: ${{ inputs.IS_LATEST }}
