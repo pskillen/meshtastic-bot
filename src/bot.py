@@ -9,7 +9,7 @@ from pubsub import pub
 
 from src.commands.factory import CommandFactory
 from src.data_classes import MeshNode, NodeInfoCollection
-from src.helpers import pretty_print_last_heard
+from src.helpers import pretty_print_last_heard, safe_encode_node_name
 from src.persistence.commands_logger import AbstractCommandLogger
 from src.persistence.user_prefs import AbstractUserPrefsPersistence
 from src.responders.responder_factory import ResponderFactory
@@ -188,7 +188,8 @@ class MeshtasticBot:
             if node.user.id == self.my_id:
                 continue
             last_heard = pretty_print_last_heard(node.last_heard)
-            logging.info(f"- {node.user.long_name} (last heard {last_heard})")
+            encoded_name = safe_encode_node_name(node.user.long_name)
+            logging.info(f"- {encoded_name} (last heard {last_heard})")
 
         logging.info(f"- Plus {len(offline_nodes)} offline nodes")
 
