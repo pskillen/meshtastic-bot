@@ -1,0 +1,44 @@
+name: armv7-base-image-build-and-push
+
+on:
+  workflow_dispatch:
+    inputs:
+      PYTHON_VERSION:
+        required: true
+        type: string
+        default: "3.12"
+      PANDAS_VERSION:
+        required: true
+        type: string
+        default: "2.2.3"
+
+
+permissions:
+  contents: read
+  packages: write
+
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+
+      - name: Build and Push Docker Image
+        run: |
+          docker buildx build \
+            --platform linux/arm/v7 \
+            --build-arg PYTHON_VERSION=${{ inputs.PYTHON_VERSION }} \
+            --build-arg PANDAS_VERSION=${{ inputs.PANDAS_VERSION }} \
+            -t ghcr.io/${{ github.repository }}-armv7-base:py${{ inputs.PYTHON_VERSION }}-pa${{ inputs.PANDAS_VERSION }} \
+            --push .
+        working-directory: ./deploy/armv7-base-image
+
