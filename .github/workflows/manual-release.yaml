@@ -1,7 +1,7 @@
 name: Manual release
 
 on:
-  workflow_call:
+  workflow_dispatch:
     inputs:
       VERSION_TAG:
         required: true
