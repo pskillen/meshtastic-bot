@@ -3,5 +3,7 @@ ARG PANDAS_VERSION=2.2.3
 
 FROM arm32v7/python:${PYTHON_VERSION}
 
+ENV PANDAS_VERSION=${PANDAS_VERSION}
+
 # Install dependencies
 RUN pip install pandas==${PANDAS_VERSION} numpy==${PANDAS_VERSION}
