@@ -7,10 +7,6 @@ on:
         required: true
         type: string
         default: "3.12"
-      PANDAS_VERSION:
-        required: true
-        type: string
-        default: "2.2.3"
 
 
 permissions:
@@ -37,8 +33,7 @@ jobs:
           docker buildx build \
             --platform linux/arm/v7 \
             --build-arg PYTHON_VERSION=${{ inputs.PYTHON_VERSION }} \
-            --build-arg PANDAS_VERSION=${{ inputs.PANDAS_VERSION }} \
-            -t ghcr.io/${{ github.repository }}-armv7-base:py${{ inputs.PYTHON_VERSION }}-pa${{ inputs.PANDAS_VERSION }} \
+            -t ghcr.io/${{ github.repository }}-armv7-base:py${{ inputs.PYTHON_VERSION }} \
+            -f Dockerfile-armv7-base \
             --push .
-        working-directory: ./deploy/armv7-base-image
 
