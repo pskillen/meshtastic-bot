@@ -32,7 +32,7 @@ jobs:
           - platform: linux/amd64
             base_image: "python:3.12"
           - platform: linux/arm/v7
-            base_image: "arm32v7/python:3.12"
+            base_image: "ghcr.io/pskillen/meshtastic-bot-armv7-base:py3.12"
           - platform: linux/arm64
             base_image: "arm64v8/python:3.12"
 
