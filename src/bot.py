@@ -1,6 +1,6 @@
 import logging
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import meshtastic.tcp_interface
 import schedule
@@ -8,9 +8,11 @@ from meshtastic.protobuf.mesh_pb2 import MeshPacket
 from pubsub import pub
 
 from src.commands.factory import CommandFactory
-from src.data_classes import MeshNode, NodeInfoCollection
+from src.data_classes import MeshNode
 from src.helpers import pretty_print_last_heard, safe_encode_node_name
 from src.persistence.commands_logger import AbstractCommandLogger
+from src.persistence.node_db import AbstractNodeDB
+from src.persistence.node_info import AbstractNodeInfoStore
 from src.persistence.user_prefs import AbstractUserPrefsPersistence
 from src.responders.responder_factory import ResponderFactory
 from src.tcp_interface import AutoReconnectTcpInterface
@@ -23,7 +25,8 @@ class MeshtasticBot:
     init_complete: bool
 
     my_id: str
-    nodes: NodeInfoCollection
+    node_db: AbstractNodeDB
+    node_info: AbstractNodeInfoStore
     command_logger: AbstractCommandLogger
 
     user_prefs_persistence: AbstractUserPrefsPersistence
@@ -37,7 +40,8 @@ class MeshtasticBot:
         self.init_complete = False
 
         self.my_id = None
-        self.nodes = NodeInfoCollection()
+        self.node_db = None
+        self.node_info = None
         self.command_logger = None
         self.user_prefs_persistence = None
 
@@ -80,7 +84,8 @@ class MeshtasticBot:
     def disconnect(self):
         self.init_complete = False
         try:
-            self.interface.close()
+            if self.interface:
+                self.interface.close()
         except OSError:
             pass
 
@@ -107,8 +112,8 @@ class MeshtasticBot:
         message = packet['decoded']['text']
         from_id = packet['fromId']
 
-        sender = self.nodes.get_by_id(from_id)
-        logging.info(f"Received private message: '{message}' from {sender.user.long_name if sender else from_id}")
+        sender = self.node_db.get_by_id(from_id)
+        logging.info(f"Received private message: '{message}' from {sender.long_name if sender else from_id}")
 
         words = message.split()
         command_name = words[0]
@@ -126,7 +131,7 @@ class MeshtasticBot:
         """Handle public messages."""
         message = packet['decoded']['text']
         from_id = packet['fromId']
-        sender = self.nodes.get_by_id(from_id)
+        sender = self.node_db.get_by_id(from_id)
 
         responder = ResponderFactory.match_responder(message, self)
         if responder:
@@ -135,73 +140,76 @@ class MeshtasticBot:
 
                 if outcome:
                     logging.info(
-                        f"Handled message from {sender.user.long_name if sender else from_id} with responder {responder.__class__.__name__}: {message}")
+                        f"Handled message from {sender.long_name if sender else from_id} with responder {responder.__class__.__name__}: {message}")
                     self.command_logger.log_responder_handled(from_id, responder, message)
             except Exception as e:
                 logging.error(f"Error handling message: {e}")
 
     def on_receive(self, packet: MeshPacket, interface):
         sender = packet['fromId']
-        node = self.nodes.get_by_id(sender)
+        node = self.node_db.get_by_id(sender)
         if not node:
             # logging.warning(f"Received packet from unknown sender {sender}")
             return
 
         if node:
-            # Update last_heard for this node
-            node.last_heard = int(datetime.now().timestamp())
-            # Increment packets_today for this node
             portnum = packet['decoded']['portnum'] if 'decoded' in packet else 'unknown'
             if sender == self.my_id and portnum == 'TELEMETRY_APP':
                 # Ignore telemetry packets sent by self
                 pass
             else:
-                self.nodes.increment_packets_today(node.user.id, portnum)
+                # Increment packets_today for this node
+                self.node_info.node_packet_received(sender, portnum)
 
         if sender == self.my_id:
             recipient_id = packet['toId']
-            recipient = self.nodes.get_by_id(recipient_id)
+            recipient = self.node_db.get_by_id(recipient_id)
             portnum = packet['decoded']['portnum']
 
             logging.debug(
-                f"Received packet from self: {recipient.user.long_name if recipient else recipient_id} (port {portnum})")
+                f"Received packet from self: {recipient.long_name if recipient else recipient_id} (port {portnum})")
 
     def on_node_updated(self, node, interface):
         # Check if the node is a new user
         if node['user'] is not None:
             mesh_node = MeshNode.from_dict(node)
-            self.nodes.add_node(mesh_node)
+            last_heard_int = node.get('lastHeard', 0)
+            last_heard = datetime.fromtimestamp(last_heard_int, tz=timezone.utc)
+            self.node_db.store_node(mesh_node)
+            self.node_info.update_last_heard(mesh_node.user.id, last_heard)
 
             if self.init_complete:
-                last_heard = pretty_print_last_heard(mesh_node.last_heard)
-                logging.info(f"New user: {mesh_node.user.long_name} (last heard {last_heard})")
+                last_heard_str = pretty_print_last_heard(last_heard)
+                logging.info(f"New user: {mesh_node.user.long_name} (last heard {last_heard_str})")
 
     def print_nodes(self):
         # filter nodes where last heard is more than 2 hours ago
-        online_nodes = self.nodes.get_online_nodes()
-        offline_nodes = self.nodes.get_offline_nodes()
+        online_nodes = self.node_info.get_online_nodes()
+        offline_nodes = self.node_info.get_offline_nodes()
 
         # print all nodes, sorted by last heard descending
         logging.info(f"Online nodes: ({len(online_nodes)})")
-        sorted_nodes = sorted(online_nodes.values(), key=lambda x: x.last_heard, reverse=True)
-        for node in sorted_nodes:
-            if node.user.id == self.my_id:
+        sorted_nodes = sorted(online_nodes, key=lambda x: online_nodes[x], reverse=True)
+        for node_id in sorted_nodes:
+            if node_id == self.my_id:
                 continue
-            last_heard = pretty_print_last_heard(node.last_heard)
-            encoded_name = safe_encode_node_name(node.user.long_name)
+            node = self.node_db.get_by_id(node_id)
+            last_heard = self.node_info.get_last_heard(node_id)
+            last_heard = pretty_print_last_heard(last_heard)
+            encoded_name = safe_encode_node_name(node.long_name)
             logging.info(f"- {encoded_name} (last heard {last_heard})")
 
         logging.info(f"- Plus {len(offline_nodes)} offline nodes")
 
     def get_global_context(self):
         return {
-            'nodes': self.nodes.list(),
-            'online_nodes': self.nodes.get_online_nodes(),
-            'offline_nodes': self.nodes.get_offline_nodes(),
+            'nodes': self.node_db.list_nodes(),
+            'online_nodes': self.node_info.get_online_nodes(),
+            'offline_nodes': self.node_info.get_offline_nodes(),
         }
 
     def start_scheduler(self):
-        schedule.every().day.at("00:00").do(self.nodes.reset_packets_today)
+        schedule.every().day.at("00:00").do(self.node_info.reset_packets_today)
         while True:
             schedule.run_pending()
             try:
@@ -209,8 +217,8 @@ class MeshtasticBot:
             except KeyboardInterrupt:
                 return
 
-    def get_node_by_short_name(self, short_name: str) -> MeshNode | None:
-        for node in self.nodes.list():
-            if node.user.short_name.lower() == short_name.lower():
+    def get_node_by_short_name(self, short_name: str) -> MeshNode.User | None:
+        for node in self.node_db.list_nodes():
+            if node.short_name.lower() == short_name.lower():
                 return node
         return None

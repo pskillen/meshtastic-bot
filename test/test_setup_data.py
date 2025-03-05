@@ -1,10 +1,12 @@
 import random
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import Mock
 
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
 from src.data_classes import MeshNode
+from src.persistence.node_db import InMemoryNodeDB
+from src.persistence.node_info import InMemoryNodeInfoStore
 
 
 def meshtastic_id_to_hex(meshtastic_id: int) -> str:
@@ -33,6 +35,19 @@ def generate_random_packet_id():
     return random.randint(0, 2 ** 32 - 1)  # 32-bit unsigned int
 
 
+_packet_types = [
+    'TEXT_MESSAGE_APP',
+    'POSITION_APP',
+    'TRACKER_APP',
+    'PRIVATE_APP',
+    'BROADCAST_APP',
+]
+
+
+def generate_random_packet_type() -> str:
+    return random.choice(_packet_types)
+
+
 def random_node_id():
     return random.randint(0, 2 ** 32 - 1)  # 32-bit unsigned int
 
@@ -47,9 +62,6 @@ def make_node():
     node.user.id = random_node_id_hex()
     node.user.short_name = node.user.id[-4:]
     node.user.long_name = 'Node ' + node.user.id
-
-    last_heard_mins_ago = random.randint(0, 180)
-    node.last_heard = int((datetime.now() - timedelta(minutes=last_heard_mins_ago)).timestamp())
     return node
 
 
@@ -63,30 +75,36 @@ def get_test_bot(node_count=2, admin_node_count=1):
     # Mocking nodes data
     nodes: list[MeshNode] = [make_node() for _ in range(node_count)]
     admin_nodes: list[MeshNode] = [make_node() for _ in range(admin_node_count)]
+    all_nodes = nodes + admin_nodes
 
     bot = MeshtasticBot(address="localhost")
-    bot.nodes.nodes = {node.user.id: node for node in nodes + admin_nodes}
     bot.admin_nodes = [node.user.id for node in admin_nodes]
+
+    # In-memory concrete implementations of various subcomponents
+    bot.node_db = InMemoryNodeDB()
+    bot.node_info = InMemoryNodeInfoStore()
+
+    # Mocking various subcomponents
+    bot.interface = Mock()
     bot.command_logger = Mock()
     bot.user_prefs_persistence = Mock()
 
-    def add_random_stats(node_id: str):
-        # Add packets
-        bot.nodes.node_packets_today[node_id] = random.randint(1, 10)
-        bot.nodes.node_packets_today_breakdown[node_id] = {
-            f'port{random.randint(0, 10)}': random.randint(1, 10),
-            f'port{random.randint(10, 20)}': random.randint(1, 10),
-            f'port{random.randint(20, 30)}': random.randint(1, 10),
-        }
-
-    for node_id in bot.nodes.nodes.keys():
-        add_random_stats(node_id)
-
-    # Mocking the interface
-    bot.interface = Mock()
-
     # nodes[0] is always my_id
     bot.my_id = nodes[0].user.id
+
+    for node in all_nodes:
+        last_heard_mins_ago = random.randint(0, 180)
+        last_heard = datetime.now(timezone.utc) - timedelta(minutes=last_heard_mins_ago)
+
+        # NodeDB
+        bot.node_db.store_node(node)
+
+        # NodeInfo - packets
+        for _ in range(random.randint(1, 10)):
+            bot.node_info.node_packet_received(node.user.id, generate_random_packet_type())
+
+        # Finally, pick a last_heard time
+        bot.node_info.update_last_heard(node.user.id, last_heard)
 
     return bot, nodes, admin_nodes
 
@@ -106,7 +124,7 @@ def build_test_text_packet(msg: str,
             "text": msg
         },
         "id": generate_random_packet_id(),
-        'rxTime': int(datetime.now().timestamp()),
+        'rxTime': int(datetime.now(timezone.utc).timestamp()),
         "rxSnr": generate_random_snr(),
         "hopLimit": hops_left,
         "wantAck": True,

@@ -20,7 +20,7 @@ class TemplateCommand(AbstractCommand):
         if not message.startswith(f"!{self.base_command}"):
             return
 
-        sender = self.bot.nodes.get_by_id(sender_id)
+        sender = self.bot.node_db.get_by_id(sender_id)
 
         # Render the template with the context variables
         template = Template(self.template)
@@ -30,9 +30,9 @@ class TemplateCommand(AbstractCommand):
             'args': message[len(self.base_command) + 1:].strip(),
             'sender': sender,
             'sender_id': sender_id,
-            'sender_name': sender.user.long_name if sender else sender_id,
-            'sender_long_name': sender.user.long_name if sender else sender_id,
-            'sender_short_name': sender.user.short_name if sender else sender_id,
+            'sender_name': sender.long_name if sender else sender_id,
+            'sender_long_name': sender.long_name if sender else sender_id,
+            'sender_short_name': sender.short_name if sender else sender_id,
             'hops_away': hops_away,
             'user_prefs': self.get_user_prefs(sender_id)
         }

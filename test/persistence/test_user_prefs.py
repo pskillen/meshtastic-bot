@@ -1,7 +1,7 @@
 import os
 import sqlite3
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 
 from src.persistence.user_prefs import UserPrefs, SqliteUserPrefsPersistence
 
@@ -25,8 +25,8 @@ class TestSqliteUserPrefsPersistence(unittest.TestCase):
     def test_persist_and_get_user_prefs(self):
         user_id = 'test_user'
         user_prefs = UserPrefs(user_id)
-        user_prefs.respond_to_testing = UserPrefs.Preference.from_values(value=True, time_set=datetime.now(),
-                                                                         num_changes=0)
+        user_prefs.respond_to_testing = UserPrefs.Preference.from_values(
+            value=True, time_set=datetime.now(timezone.utc), num_changes=0)
 
         self.persistence.persist_user_prefs(user_id, user_prefs)
         retrieved_prefs = self.persistence.get_user_prefs(user_id)
@@ -38,8 +38,8 @@ class TestSqliteUserPrefsPersistence(unittest.TestCase):
     def test_update_user_prefs(self):
         user_id = 'test_user'
         user_prefs = UserPrefs(user_id)
-        user_prefs.respond_to_testing = UserPrefs.Preference.from_values(value=True, time_set=datetime.now(),
-                                                                         num_changes=0)
+        user_prefs.respond_to_testing = UserPrefs.Preference.from_values(
+            value=True, time_set=datetime.now(timezone.utc), num_changes=0)
 
         self.persistence.persist_user_prefs(user_id, user_prefs)
         user_prefs.respond_to_testing.value = False
@@ -52,10 +52,10 @@ class TestSqliteUserPrefsPersistence(unittest.TestCase):
     def test_multiple_settings(self):
         user_id = 'test_user'
         user_prefs = UserPrefs(user_id)
-        user_prefs.respond_to_testing = UserPrefs.Preference.from_values(value=True, time_set=datetime.now(),
-                                                                         num_changes=0)
-        user_prefs.another_setting = UserPrefs.Preference.from_values(value='value', time_set=datetime.now(),
-                                                                      num_changes=0)
+        user_prefs.respond_to_testing = UserPrefs.Preference.from_values(
+            value=True, time_set=datetime.now(timezone.utc), num_changes=0)
+        user_prefs.another_setting = UserPrefs.Preference.from_values(
+            value='value', time_set=datetime.now(timezone.utc), num_changes=0)
 
         self.persistence.persist_user_prefs(user_id, user_prefs)
         retrieved_prefs = self.persistence.get_user_prefs(user_id)
@@ -67,10 +67,10 @@ class TestSqliteUserPrefsPersistence(unittest.TestCase):
     def test_field_change_does_not_update_others(self):
         user_id = 'test_user'
         user_prefs = UserPrefs(user_id)
-        user_prefs.respond_to_testing = UserPrefs.Preference.from_values(value=True, time_set=datetime.now(),
-                                                                         num_changes=0)
-        user_prefs.another_setting = UserPrefs.Preference.from_values(value='value', time_set=datetime.now(),
-                                                                      num_changes=0)
+        user_prefs.respond_to_testing = UserPrefs.Preference.from_values(
+            value=True, time_set=datetime.now(timezone.utc), num_changes=0)
+        user_prefs.another_setting = UserPrefs.Preference.from_values(
+            value='value', time_set=datetime.now(timezone.utc), num_changes=0)
         original_time_set_testing = user_prefs.respond_to_testing.time_set
         original_time_set_another = user_prefs.another_setting.time_set
 
