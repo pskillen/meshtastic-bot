@@ -39,6 +39,6 @@ jobs:
             --build-arg PYTHON_VERSION=${{ inputs.PYTHON_VERSION }} \
             --build-arg PANDAS_VERSION=${{ inputs.PANDAS_VERSION }} \
             -t ghcr.io/${{ github.repository }}-armv7-base:py${{ inputs.PYTHON_VERSION }}-pa${{ inputs.PANDAS_VERSION }} \
+            -f Dockerfile-armv7-base \
             --push .
-        working-directory: ./deploy/armv7-base-image
 
