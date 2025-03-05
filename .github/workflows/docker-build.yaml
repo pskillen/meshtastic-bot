@@ -28,6 +28,13 @@ jobs:
     strategy:
       matrix:
         platform: [ linux/amd64, linux/arm/v7, linux/arm64 ]
+        include:
+          - platform: linux/amd64
+            base_image: "python:3.12"
+          - platform: linux/arm/v7
+            base_image: "ghcr.io/pskillen/meshtastic-bot-armv7-base:py3.12"
+          - platform: linux/arm64
+            base_image: "arm64v8/python:3.12"
 
     steps:
       - name: Checkout Repository
@@ -42,13 +49,14 @@ jobs:
       - name: Setup vars
         run: |
           PLATFORM_TAG=$(echo "${{ matrix.platform }}" | sed 's|/|-|g')
-          echo "TAG=${{ inputs.VERSION_TAG }}-$PLATFORM_TAG" >> $GITHUB_ENV
+          echo "PLATFORM_TAG=$PLATFORM_TAG" >> $GITHUB_ENV
 
       - name: Build and Push Docker Image
         run: |
           docker buildx build \
             --platform ${{ matrix.platform }} \
-            -t ghcr.io/${{ github.repository }}:${{ env.TAG }} \
+            --build-arg BASE_IMAGE=${{ matrix.base_image }} \
+            -t ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}-${{ env.PLATFORM_TAG }} \
             --push .
 
   create-manifest:
@@ -79,3 +87,4 @@ jobs:
             docker buildx imagetools create \
               -t ghcr.io/${{ github.repository }}:latest \
               ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}
+          fi
