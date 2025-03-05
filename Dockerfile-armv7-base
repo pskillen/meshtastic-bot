@@ -6,6 +6,6 @@ FROM arm32v7/python:${PYTHON_VERSION}
 COPY requirements.txt .
 
 # Install dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --prefer-binary -r requirements.txt
 
 # This image will be used as the base for the ARMv7 build, with the main Dockefile being built on top of this one
