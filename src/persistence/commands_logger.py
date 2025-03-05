@@ -4,6 +4,8 @@ from datetime import datetime, timezone
 
 import pandas as pd
 
+from src.persistence import BaseSqlitePersistenceStore
+
 
 class AbstractCommandLogger(abc.ABC):
 
@@ -32,10 +34,7 @@ class AbstractCommandLogger(abc.ABC):
         pass
 
 
-class SqliteCommandLogger(AbstractCommandLogger):
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-        self._initialize_db()
+class SqliteCommandLogger(AbstractCommandLogger, BaseSqlitePersistenceStore):
 
     def _initialize_db(self):
         with sqlite3.connect(self.db_path) as conn:

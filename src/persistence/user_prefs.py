@@ -1,7 +1,8 @@
 import abc
-import logging
 import sqlite3
 from datetime import datetime, timezone
+
+from src.persistence import BaseSqlitePersistenceStore
 
 
 class UserPrefs:
@@ -47,12 +48,7 @@ class AbstractUserPrefsPersistence(abc.ABC):
         pass
 
 
-class SqliteUserPrefsPersistence(AbstractUserPrefsPersistence):
-    db_path: str
-
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-        self._initialize_db()
+class SqliteUserPrefsPersistence(AbstractUserPrefsPersistence, BaseSqlitePersistenceStore):
 
     def _initialize_db(self):
         with sqlite3.connect(self.db_path) as conn:
@@ -68,8 +64,6 @@ class SqliteUserPrefsPersistence(AbstractUserPrefsPersistence):
                 )
             ''')
             conn.commit()
-
-        logging.info('Connected to user prefs DB at ' + self.db_path)
 
     def get_user_prefs(self, user_id: str) -> UserPrefs:
         with sqlite3.connect(self.db_path) as conn:
