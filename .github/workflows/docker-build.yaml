@@ -87,3 +87,4 @@ jobs:
             docker buildx imagetools create \
               -t ghcr.io/${{ github.repository }}:latest \
               ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}
+          fi
