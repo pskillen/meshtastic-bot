@@ -1,5 +1,6 @@
 import logging
 import time
+from datetime import datetime, timezone
 
 import meshtastic.tcp_interface
 import schedule
@@ -170,15 +171,16 @@ class MeshtasticBot:
 
     def on_node_updated(self, node, interface):
         # Check if the node is a new user
-        # TODO: Work this one out - do we store userinfo, update position, device metrics, etc?
         if node['user'] is not None:
             mesh_node = MeshNode.from_dict(node)
+            last_heard_int = node.get('lastHeard', 0)
+            last_heard = datetime.fromtimestamp(last_heard_int, tz=timezone.utc)
             self.node_db.store_node(mesh_node)
-            self.node_info.update_last_heard(mesh_node.user.id)
+            self.node_info.update_last_heard(mesh_node.user.id, last_heard)
 
             if self.init_complete:
-                last_heard = pretty_print_last_heard(mesh_node.last_heard)
-                logging.info(f"New user: {mesh_node.user.long_name} (last heard {last_heard})")
+                last_heard_str = pretty_print_last_heard(last_heard)
+                logging.info(f"New user: {mesh_node.user.long_name} (last heard {last_heard_str})")
 
     def print_nodes(self):
         # filter nodes where last heard is more than 2 hours ago
