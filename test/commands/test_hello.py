@@ -16,7 +16,7 @@ class TestHelloCommand(CommandTestCase):
         sender_node = self.test_nodes[1]
 
         packet = build_test_text_packet('!hello', sender_node.user.id, self.bot.my_id)
-        expected_response = f"Hello, {sender_node.user.long_name}! How can I help you? (tip: try !help)"
+        expected_response = f"Hello, {sender_node.user.long_name}! How can I help you? (tip: try !help). I'm a bot maintained by PDY4 / pskillen@gmail.com"
 
         self.command.handle_packet(packet)
 
