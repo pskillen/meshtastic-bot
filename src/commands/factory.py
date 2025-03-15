@@ -24,7 +24,7 @@ class CommandFactory:
             "args": []
         },
         "!prefs": {
-            "class": "src.commands.template.UserPrefsCommand",
+            "class": "src.commands.prefs.PrefsCommandHandler",
             "args": []
         },
         "!admin": {
