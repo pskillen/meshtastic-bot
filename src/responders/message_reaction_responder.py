@@ -22,7 +22,7 @@ class MessageReactionResponder(AbstractResponder):
         emoji = random.choice(self.emoji)
 
         # Respond to the message
-        self.react_to(packet, emoji)
+        self.react_in_channel(packet, emoji)
 
     def _is_enrolled(self, from_id: str) -> bool:
         user_prefs = self.bot.user_prefs_persistence.get_user_prefs(from_id)
