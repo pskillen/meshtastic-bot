@@ -31,14 +31,14 @@ class CommandFactory:
             "class": "src.commands.admin.AdminCommand",
             "args": []
         },
-        "!enroll": {
-            "class": "src.commands.enroll.EnrollCommandHandler",
-            "args": ["enroll"]
-        },
-        "!leave": {
-            "class": "src.commands.enroll.EnrollCommandHandler",
-            "args": ["leave"]
-        },
+        # "!enroll": {
+        #     "class": "src.commands.enroll.EnrollCommandHandler",
+        #     "args": ["enroll"]
+        # },
+        # "!leave": {
+        #     "class": "src.commands.enroll.EnrollCommandHandler",
+        #     "args": ["leave"]
+        # },
     }
 
     @staticmethod
