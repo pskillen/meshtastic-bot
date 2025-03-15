@@ -1,31 +1,39 @@
 import inspect
-import logging
 from abc import ABC, abstractmethod
 
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
+from typing_extensions import deprecated
 
+from src.base_feature import AbstractBaseFeature
 from src.bot import MeshtasticBot
 
 
-class AbstractCommand(ABC):
-    bot: MeshtasticBot
+class AbstractCommand(AbstractBaseFeature, ABC):
     base_command: str
 
     def __init__(self, bot: MeshtasticBot, base_command: str):
-        self.bot = bot
+        super().__init__(bot)
         self.base_command = base_command
 
     @abstractmethod
     def handle_packet(self, packet: MeshPacket) -> None:
         pass
 
+    @deprecated("use reply_in_dm instead")
     def reply(self, packet: MeshPacket, message: str, want_ack=False) -> None:
-        destination_id = packet['fromId']
-        self.reply_to(destination_id, message, want_ack)
+        """
+        Reply to a message in the same channel
+        This is a deprecated method, use reply_in_channel instead
+        """
+        self.reply_in_dm(packet, message, want_ack)
 
+    @deprecated("use message_in_dm instead")
     def reply_to(self, destination_id: str, message: str, want_ack=False) -> None:
-        logging.debug(f"Sending response: '{message}'")
-        self.bot.interface.sendText(message, destinationId=destination_id, wantAck=want_ack)
+        """
+        Reply in a direct message to a user
+        This is a deprecated method, use reply_in_dm instead
+        """
+        self.message_in_dm(destination_id, message, want_ack)
 
     @abstractmethod
     def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):
@@ -62,7 +70,7 @@ class AbstractCommandWithSubcommands(AbstractCommand, ABC):
 
     def __init__(self, bot: MeshtasticBot,
                  base_command_str: str,
-                 error_on_invalid_subcommand = True):
+                 error_on_invalid_subcommand=True):
         super().__init__(bot, base_command_str)
         self.sub_commands = {
             '': self.handle_base_command,
