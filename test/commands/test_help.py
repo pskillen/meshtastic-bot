@@ -19,10 +19,16 @@ class TestHelpCommand(CommandWSCTestCase):
 
         response = self.mock_interface.sendText.call_args[0][0]
 
+        skipped_commands = ['!admin']
+
         # Ensure every command in CommandFactory is mentioned in the response
         for command in CommandFactory.commands.keys():
-            self.assertIn(command, response)
-            print(f"Found command '{command}' in response")
+            if command in skipped_commands:
+                self.assertNotIn(command, response)
+                print(f"Skipped command '{command}' correctly not found in response")
+            else:
+                self.assertIn(command, response)
+                print(f"Found command '{command}' in response")
 
     def test_handle_packet_hello_command(self):
         packet = build_test_text_packet('!help hello', self.test_nodes[1].user.id, self.bot.my_id)
