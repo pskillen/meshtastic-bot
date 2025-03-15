@@ -1,3 +1,4 @@
+import inspect
 import logging
 from abc import ABC, abstractmethod
 
@@ -79,7 +80,15 @@ class AbstractCommandWithSubcommands(AbstractCommand, ABC):
 
         sub_command = self.sub_commands.get(sub_command_name)
         if sub_command:
-            sub_command(packet, args)
+            # Check the number of positional arguments the sub_command takes
+            num_args = len(inspect.signature(sub_command).parameters)
+
+            if num_args == 2:
+                sub_command(packet, args)
+            elif num_args == 3:
+                sub_command(packet, args, sub_command_name)
+            else:
+                raise ValueError(f"Subcommand '{sub_command_name}' has an unexpected number of arguments")
         else:
             response = f"Unknown command '{sub_command_name}'"
             self.reply(packet, response)
