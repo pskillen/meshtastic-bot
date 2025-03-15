@@ -1,5 +1,6 @@
 import abc
 import json
+import logging
 import os.path
 from datetime import datetime, timezone, timedelta
 
@@ -126,6 +127,7 @@ class InMemoryNodeInfoStore(AbstractNodeInfoStore):
                 'node_packets_today_breakdown': self.node_packets_today_breakdown
             }
             json.dump(data, file, indent=4)
+        logging.info(f"Node info persisted to {node_info_file}")
 
     def get_last_heard(self, node_id) -> datetime | None:
         return self.nodes_last_heard.get(node_id)

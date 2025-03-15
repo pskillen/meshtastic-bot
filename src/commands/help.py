@@ -12,11 +12,15 @@ class HelpCommand(AbstractCommandWithSubcommands):
         self.sub_commands['nodes'] = self.handle_nodes
         self.sub_commands['whoami'] = self.handle_whoami
         self.sub_commands['prefs'] = self.handle_prefs
-        self.sub_commands['enroll'] = self.handle_enroll
-        self.sub_commands['leave'] = self.handle_leave
+        # self.sub_commands['enroll'] = self.handle_enroll
+        # self.sub_commands['leave'] = self.handle_leave
 
     def handle_base_command(self, packet: MeshPacket, args: list[str]) -> None:
-        response = "Valid commands are: !ping, !hello, !help, !nodes, !whoami, !prefs, !admin, !enroll, !leave"
+        subcmds = self.sub_commands.keys()
+        subcmds = filter(None, subcmds)  # remove empty strings
+        subcmds = [f"!{cmd}" for cmd in subcmds]
+
+        response = f"Valid commands are: {', '.join(subcmds)}"
         self.reply(packet, response)
 
     def handle_hello(self, packet: MeshPacket, args: list[str]) -> None:
@@ -40,7 +44,7 @@ class HelpCommand(AbstractCommandWithSubcommands):
         self.reply(packet, response)
 
     def handle_prefs(self, packet: MeshPacket, args: list[str]) -> None:
-        response = "!prefs: show your user preferences"
+        response = "!prefs: show and update your user preferences"
         self.reply(packet, response)
 
     def handle_enroll(self, packet: MeshPacket, args: list[str]) -> None:

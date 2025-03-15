@@ -1,3 +1,4 @@
+import inspect
 import logging
 from abc import ABC, abstractmethod
 
@@ -59,12 +60,15 @@ class AbstractCommand(ABC):
 class AbstractCommandWithSubcommands(AbstractCommand, ABC):
     sub_commands: dict[str, callable]
 
-    def __init__(self, bot: MeshtasticBot, base_command_str):
+    def __init__(self, bot: MeshtasticBot,
+                 base_command_str: str,
+                 error_on_invalid_subcommand = True):
         super().__init__(bot, base_command_str)
         self.sub_commands = {
             '': self.handle_base_command,
             'help': self.show_help,
         }
+        self.error_on_invalid_subcommand = error_on_invalid_subcommand
 
     def handle_packet(self, packet: MeshPacket) -> None:
         message = packet['decoded']['text']
@@ -79,10 +83,21 @@ class AbstractCommandWithSubcommands(AbstractCommand, ABC):
 
         sub_command = self.sub_commands.get(sub_command_name)
         if sub_command:
-            sub_command(packet, args)
+            # Check the number of positional arguments the sub_command takes
+            num_args = len(inspect.signature(sub_command).parameters)
+
+            if num_args == 2:
+                sub_command(packet, args)
+            elif num_args == 3:
+                sub_command(packet, args, sub_command_name)
+            else:
+                raise ValueError(f"Subcommand '{sub_command_name}' has an unexpected number of arguments")
         else:
-            response = f"Unknown command '{sub_command_name}'"
-            self.reply(packet, response)
+            if self.error_on_invalid_subcommand:
+                response = f"Unknown command '{sub_command_name}'"
+                self.reply(packet, response)
+            else:
+                return self.show_help(packet, args)
 
     @abstractmethod
     def handle_base_command(self, packet: MeshPacket, args: list[str]) -> None:

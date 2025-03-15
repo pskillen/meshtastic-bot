@@ -49,7 +49,7 @@ class NodesCommand(AbstractCommandWithSubcommands):
             node = self.bot.node_db.get_by_short_name(args[0])
 
             if not node:
-                response = f"Unknown command: !nodes busy '{args}' - valid args are 'detailed' or (node ID)"
+                response = f"Unknown command: !nodes busy '{' '.join(args)}' - valid args are 'detailed' or (node ID)"
                 return self.reply(packet, response)
 
             self.send_detailed_nodeinfo(sender, node.id)

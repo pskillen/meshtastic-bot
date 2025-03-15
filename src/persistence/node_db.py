@@ -200,7 +200,7 @@ class SqliteNodeDB(BaseSqlitePersistenceStore, AbstractNodeDB):
         with sqlite3.connect(self.db_path) as conn:
             cursor = conn.cursor()
             cursor.execute(
-                'SELECT id, short_name, long_name, macaddr, hw_model, public_key FROM nodes WHERE short_name = ?',
+                'SELECT id, short_name, long_name, macaddr, hw_model, public_key FROM nodes WHERE short_name = ? COLLATE NOCASE',
                 (short_name,))
             row = cursor.fetchone()
             if row:
