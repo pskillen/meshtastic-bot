@@ -52,7 +52,7 @@ class AbstractBaseFeature(ABC):
         reply_id = packet['id']
         channel = packet['channel'] if 'channel' in packet else 0
 
-        self.bot.interface.sendReaction(emoji, reply_id, channelIndex=channel)
+        self.bot.interface.sendReaction(emoji, messageId=reply_id, channelIndex=channel)
 
     def react_in_dm(self, packet: MeshPacket, emoji: str) -> None:
         """
@@ -63,4 +63,4 @@ class AbstractBaseFeature(ABC):
         reply_id = packet['id']
         sender = packet['fromId']
 
-        self.bot.interface.sendReaction(emoji, reply_id, sender)
+        self.bot.interface.sendReaction(emoji, messageId=reply_id, destinationId=sender)
