@@ -36,4 +36,5 @@ jobs:
             -t ghcr.io/${{ github.repository }}-armv7-base:py${{ inputs.PYTHON_VERSION }} \
             -f Dockerfile-armv7-base \
             --push .
+        working-directory: ./bot
 
