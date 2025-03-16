@@ -29,14 +29,17 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+        working-directory: ./bot
 
       - name: Test with pytest
         run: |
           pip install pytest pytest-cov
           pytest test/ --doctest-modules --junitxml=reports/test-results-${{ matrix.python-version }}.xml
+        working-directory: ./bot
 
       - name: Test Report
         uses: dorny/test-reporter@v1
+        working-directory: ./bot
         with:
           name: pytest-results-${{ matrix.python-version }}
           path: reports/test-results-${{ matrix.python-version }}.xml
