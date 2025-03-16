@@ -43,13 +43,13 @@ class TestAbstractBaseFeature(unittest.TestCase):
         sender = self.test_non_admin_nodes[1]
         packet = build_test_text_packet('!test', sender.user.id, self.bot.my_id, channel=1)
         self.feature.react_in_channel(packet, "👍")
-        self.mock_interface.sendReaction.assert_called_once_with("👍", packet['id'], channelIndex=1)
+        self.mock_interface.sendReaction.assert_called_once_with("👍", messageId=packet['id'], channelIndex=1)
 
     def test_react_in_dm(self):
         sender = self.test_non_admin_nodes[1]
         packet = build_test_text_packet('!test', sender.user.id, self.bot.my_id)
         self.feature.react_in_dm(packet, "👍")
-        self.mock_interface.sendReaction.assert_called_once_with("👍", packet['id'], sender.user.id)
+        self.mock_interface.sendReaction.assert_called_once_with("👍", messageId=packet['id'], destinationId=sender.user.id)
 
 
 if __name__ == '__main__':
