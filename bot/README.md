@@ -9,12 +9,12 @@ commands, and responds with appropriate actions.
 - Supports responders on public channels
 - Stores various statistics about the network
 
-## Installation
+## Installation (BOT)
 
 1. Clone the repository:
     ```sh
     git clone https://github.com/yourusername/meshtastic-bot.git
-    cd meshtastic-bot
+    cd meshtastic-bot/bot
     ```
 
 2. Install the required Python packages:
@@ -33,7 +33,7 @@ commands, and responds with appropriate actions.
 
 2. Run the bot:
     ```sh
-    python main.py
+    python -m src.main
     ```
 
 ## Commands
