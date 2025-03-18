@@ -1,8 +1,8 @@
 import logging
+import sys
 import time
 from datetime import datetime, timezone
 
-import meshtastic.tcp_interface
 import schedule
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 from pubsub import pub
@@ -15,13 +15,13 @@ from src.persistence.node_db import AbstractNodeDB
 from src.persistence.node_info import AbstractNodeInfoStore
 from src.persistence.user_prefs import AbstractUserPrefsPersistence
 from src.responders.responder_factory import ResponderFactory
-from src.tcp_interface import AutoReconnectTcpInterface
+from src.tcp_interface import AutoReconnectTcpInterface, SupportsMessageReactionInterface
 
 
 class MeshtasticBot:
     admin_nodes: list[str]
 
-    interface: meshtastic.tcp_interface.TCPInterface
+    interface: SupportsMessageReactionInterface
     init_complete: bool
 
     my_id: str
@@ -45,16 +45,23 @@ class MeshtasticBot:
         self.command_logger = None
         self.user_prefs_persistence = None
 
-    def connect(self):
-        logging.info(f"Connecting to Meshtastic node at {self.address}...")
-        self.init_complete = False
         pub.subscribe(self.on_receive, "meshtastic.receive")
         pub.subscribe(self.on_receive_text, "meshtastic.receive.text")
         pub.subscribe(self.on_node_updated, "meshtastic.node.updated")
         pub.subscribe(self.on_connection, "meshtastic.connection.established")
+
+    def connect(self):
+        logging.info(f"Connecting to Meshtastic node at {self.address}...")
+        self.init_complete = False
+
+        old_packet_queue = None
+        if self.interface and hasattr(self.interface, 'packet_queue'):
+            old_packet_queue = self.interface.packet_queue
+
         self.interface = AutoReconnectTcpInterface(
             hostname=self.address,
-            error_handler=self._handle_interface_error
+            error_handler=self._handle_interface_error,
+            packet_queue=old_packet_queue,
         )
 
         logging.info("Connected. Listening for messages...")
@@ -65,19 +72,20 @@ class MeshtasticBot:
         logging.error(f"Handling interface error: {error}")
         backoff_time = 5  # Initial back-off time in seconds
         max_backoff_time = 300  # Maximum back-off time in seconds (5 minutes)
+        backoff_rate = 1.5  # Exponential back-off rate
 
         while True:
             try:
-                self.interface = AutoReconnectTcpInterface(
-                    hostname=self.address,
-                    error_handler=self._handle_interface_error
-                )
-                self.interface.connect()
+                self.connect()
+                self.init_complete = True
                 logging.info("Reconnected successfully")
                 break
             except Exception as e:
                 logging.error(f"Reconnection attempt failed: {e}")
-                backoff_time = min(backoff_time * 1.5, max_backoff_time)  # Exponential back-off
+                if backoff_time == max_backoff_time:
+                    logging.error("Max backoff time reached. Exiting.")
+                    sys.exit(1)
+                backoff_time = min(backoff_time * backoff_rate, max_backoff_time)  # Exponential back-off
                 logging.info(f"Next reconnection attempt in {backoff_time} seconds")
                 time.sleep(backoff_time)
 
@@ -86,8 +94,9 @@ class MeshtasticBot:
         try:
             if self.interface:
                 self.interface.close()
-        except OSError:
-            pass
+                self.interface._disconnected()
+        except OSError as ex:
+            logging.warning(f"Failed to close connection. Continuing anyway: {ex}")
 
     def on_connection(self, interface, topic=pub.AUTO_TOPIC):
         my_nodenum = interface.localNode.nodeNum  # in dec
