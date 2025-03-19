@@ -58,7 +58,6 @@ jobs:
             --build-arg BASE_IMAGE=${{ matrix.base_image }} \
             -t ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}-${{ env.PLATFORM_TAG }} \
             --push .
-        working-directory: ./bot
 
   create-manifest:
     runs-on: ubuntu-latest
