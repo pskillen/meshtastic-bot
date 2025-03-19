@@ -6,7 +6,7 @@ services:
     build:
       context: "./"
     container_name: meshtastic-bot
-    restart: always
+    restart: unless-stopped
     environment:
       - MESHTASTIC_IP=meshtastic.local
       - ADMIN_NODES='!aae8900d'  # Change this, unless you want me to be the admin of your bot
@@ -18,7 +18,7 @@ services:
   watchtower:
     image: containrrr/watchtower
     container_name: watchtower
-    restart: always
+    restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --interval 3600 meshtastic-bot  # Check for updates every hour

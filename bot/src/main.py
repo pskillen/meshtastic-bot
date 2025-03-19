@@ -5,6 +5,7 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from src.api.StorageAPI import StorageAPIWrapper
 from src.bot import MeshtasticBot
 from src.persistence.commands_logger import SqliteCommandLogger
 from src.persistence.node_info import InMemoryNodeInfoStore
@@ -18,6 +19,8 @@ load_dotenv()
 MESHTASTIC_IP = os.getenv("MESHTASTIC_IP")
 ADMIN_NODES = os.getenv("ADMIN_NODES").split(',')
 DATA_DIR = os.getenv("DATA_DIR", "data")
+STORAGE_API_ROOT = os.getenv("STORAGE_API_ROOT")
+STORAGE_API_TOKEN = os.getenv("STORAGE_API_TOKEN", None)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,
@@ -48,6 +51,8 @@ def main():
     bot.node_db = SqliteNodeDB(str(node_db_file))
     node_info = InMemoryNodeInfoStore()
     bot.node_info = node_info
+    if STORAGE_API_ROOT:
+        bot.storage_api = StorageAPIWrapper(STORAGE_API_ROOT, STORAGE_API_TOKEN)
 
     try:
         node_info.load_from_file(str(node_info_file))

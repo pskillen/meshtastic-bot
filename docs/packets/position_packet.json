@@ -1,0 +1,28 @@
+{
+  "channel": 1,
+  "decoded": {
+    "bitfield": 0,
+    "payload": "\r\x00\x00T!\x15\x00\x00\x8c\xfd%\x02\x81\xd9g(\x03\xb8\x01\r",
+    "portnum": "POSITION_APP",
+    "position": {
+      "latitude": 55.9153152,
+      "latitudeI": 559153152,
+      "locationSource": "LOC_EXTERNAL",
+      "longitude": -4.1156608,
+      "longitudeI": -41156608,
+      "precisionBits": 13,
+      "raw": "..."
+    }
+  },
+  "from": 1127957872,
+  "fromId": "!433b4570",
+  "hopLimit": 1,
+  "hopStart": 3,
+  "id": 2080478507,
+  "raw": "...",
+  "rxRssi": -105,
+  "rxSnr": -5.5,
+  "rxTime": 1742307592,
+  "to": 4294967295,
+  "toId": "^all"
+}

@@ -1,0 +1,20 @@
+{
+  "decoded": {
+    "bitfield": 0,
+    "payload": "Hi",
+    "portnum": "TEXT_MESSAGE_APP",
+    "text": "Hi"
+  },
+  "from": 2867367949,
+  "fromId": "!aae8900d",
+  "hopLimit": 6,
+  "hopStart": 6,
+  "id": 2930769566,
+  "raw": "",
+  "relayNode": 13,
+  "rxRssi": -58,
+  "rxSnr": 7.5,
+  "rxTime": 1742307565,
+  "to": 4294967295,
+  "toId": "^all"
+}
