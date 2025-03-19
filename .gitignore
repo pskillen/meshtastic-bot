@@ -6,6 +6,7 @@ state.json
 nodes.json
 all_state.json
 data/
+docker-data/
 
 ### Python template
 # Byte-compiled / optimized / DLL files
@@ -136,6 +137,7 @@ celerybeat.pid
 .venv
 env/
 venv/
+venv-*/
 ENV/
 env.bak/
 venv.bak/
