@@ -1,0 +1,26 @@
+{
+  "decoded": {
+    "payload": "\r\xfb\x80\xd9g\x12\x15\x08e\x15\xd5x\x89@\x1d\xf2\x8b\xa7A%\xe7!\xff?(\xd1\xd75",
+    "portnum": "TELEMETRY_APP",
+    "telemetry": {
+      "deviceMetrics": {
+        "airUtilTx": 1.9932221,
+        "batteryLevel": 101,
+        "channelUtilization": 20.943333,
+        "uptimeSeconds": 879569,
+        "voltage": 4.296
+      },
+      "raw": "...",
+      "time": 1742307579
+    }
+  },
+  "from": 1129933592,
+  "fromId": "!43596b18",
+  "hopLimit": 4,
+  "id": 2084210215,
+  "priority": "BACKGROUND",
+  "raw": "...",
+  "rxTime": 1742307579,
+  "to": 4294967295,
+  "toId": "^all"
+}

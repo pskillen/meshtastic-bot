@@ -1,0 +1,27 @@
+{
+  "channel": 1,
+  "decoded": {
+    "bitfield": 0,
+    "payload": "...",
+    "portnum": "NODEINFO_APP",
+    "user": {
+      "hwModel": "HELTEC_WSL_V3",
+      "id": "!da545c78",
+      "longName": "JPPX Home",
+      "macaddr": "NLfaVFx4",
+      "publicKey": "oLOpz1p7W8/Ti8Z0iOU4TqZAYVAXe3Uwm8EF/m1zLFs=",
+      "raw": "..."
+    }
+  },
+  "from": 3662961784,
+  "fromId": "!da545c78",
+  "hopLimit": 6,
+  "hopStart": 7,
+  "id": 3194804789,
+  "raw": "...",
+  "rxRssi": -109,
+  "rxSnr": -6.75,
+  "rxTime": 1742308412,
+  "to": 4294967295,
+  "toId": "^all"
+}

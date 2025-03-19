@@ -1,0 +1,15 @@
+{
+  "channel": 15,
+  "encrypted": "oGaidsu1m+AL9DbNsG/ThJCCDmO4MWPVwHE=",
+  "from": 1128047728,
+  "fromId": "!433ca470",
+  "hopLimit": 4,
+  "hopStart": 5,
+  "id": 1978251061,
+  "raw": "...",
+  "rxRssi": -119,
+  "rxSnr": -14.5,
+  "rxTime": 1742307560,
+  "to": 4294967295,
+  "toId": "^all"
+}
