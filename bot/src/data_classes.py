@@ -93,7 +93,9 @@ class MeshNode:
         position.latitude = position_data.get('latitude', 0.0)
         position.longitude = position_data.get('longitude', 0.0)
         position.altitude = position_data.get('altitude', 0)
-        position.reported_time = position_data.get('time', datetime.now(timezone.utc))
+        # 'time' is a timestamp int
+        position.reported_time = datetime.fromtimestamp(position_data.get('time'), timezone.utc) \
+            if 'time' in position_data else datetime.now(timezone.utc)
         position.location_source = position_data.get('locationSource', '')
 
         device_metrics_data = node_data.get('deviceMetrics', {})
