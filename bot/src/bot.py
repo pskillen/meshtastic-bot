@@ -6,7 +6,9 @@ from datetime import datetime, timezone
 import schedule
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 from pubsub import pub
+from requests import HTTPError
 
+from src.api.StorageAPI import StorageAPIWrapper
 from src.commands.factory import CommandFactory
 from src.data_classes import MeshNode
 from src.helpers import pretty_print_last_heard, safe_encode_node_name
@@ -31,6 +33,8 @@ class MeshtasticBot:
 
     user_prefs_persistence: AbstractUserPrefsPersistence
 
+    storage_api: StorageAPIWrapper
+
     def __init__(self, address: str):
         self.address = address
 
@@ -44,6 +48,7 @@ class MeshtasticBot:
         self.node_info = None
         self.command_logger = None
         self.user_prefs_persistence = None
+        self.storage_api = None
 
         pub.subscribe(self.on_receive, "meshtastic.receive")
         pub.subscribe(self.on_receive_text, "meshtastic.receive.text")
@@ -155,6 +160,17 @@ class MeshtasticBot:
                 logging.error(f"Error handling message: {e}")
 
     def on_receive(self, packet: MeshPacket, interface):
+
+        if self.storage_api:
+            try:
+                self.storage_api.store_raw_packet(packet)
+            except HTTPError as ex:
+                logging.warning(f"Error storing packet: {ex.response.text}")
+                pass
+            except Exception as ex:
+                logging.warning(f"Error storing packet in API: {ex}")
+                pass
+
         sender = packet['fromId']
         node = self.node_db.get_by_id(sender)
         if not node:
@@ -186,6 +202,16 @@ class MeshtasticBot:
             last_heard = datetime.fromtimestamp(last_heard_int, tz=timezone.utc)
             self.node_db.store_node(mesh_node)
             self.node_info.update_last_heard(mesh_node.user.id, last_heard)
+
+            if self.storage_api:
+                try:
+                    self.storage_api.store_node(mesh_node)
+                except HTTPError as ex:
+                    logging.warning(f"Error storing node: {ex.response.text}")
+                    pass
+                except Exception as ex:
+                    logging.warning(f"Error storing node: {ex}")
+                    pass
 
             if self.init_complete:
                 last_heard_str = pretty_print_last_heard(last_heard)
