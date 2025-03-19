@@ -1,13 +1,20 @@
-{'channel': 1, 'decoded': {'payload': b'\x18\x00', 'portnum': 'ROUTING_APP', 'requestId': 1909468930, 'routing': {'errorReason': 'NONE', 'raw': error_reason: NONE
-}}, 'from': 1129933592, 'fromId': '!43596b18', 'id': 931296003, 'priority': 'ACK', 'raw': from: 1129933592
-  to: 1129933592
-  channel: 1
-  decoded {
-  portnum: ROUTING_APP
-  payload: "\030\000"
-  request_id: 1909468930
+{
+  "channel": 1,
+  "decoded": {
+    "payload": "\x18\x00",
+    "portnum": "ROUTING_APP",
+    "requestId": 1909468930,
+    "routing": {
+      "errorReason": "NONE",
+      "raw": "..."
+    }
+  },
+  "from": 1129933592,
+  "fromId": "!43596b18",
+  "id": 931296003,
+  "priority": "ACK",
+  "raw": "...",
+  "rxTime": 1742319692,
+  "to": 1129933592,
+  "toId": "!43596b18"
 }
-id: 931296003
-rx_time: 1742319692
-priority: ACK
-, 'rxTime': 1742319692, 'to': 1129933592, 'toId': '!43596b18'}
