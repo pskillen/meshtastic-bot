@@ -8,7 +8,9 @@ class ResponderFactory:
             "class": "src.responders.message_reaction_responder.MessageReactionResponder",
             "trigger_regex": [
                 re.compile(r"^test$", re.IGNORECASE),
+                re.compile(r"^test .*$", re.IGNORECASE),
                 re.compile(r"^testing$", re.IGNORECASE),
+                re.compile(r"^testing .*$", re.IGNORECASE),
             ],
             "args": ["👍🔉👂✅📡👋🐭"],
         },
