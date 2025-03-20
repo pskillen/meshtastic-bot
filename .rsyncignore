@@ -10,3 +10,4 @@ src/*.json
 *.sqlite
 *.sqlite3
 .env
+docker-data/
