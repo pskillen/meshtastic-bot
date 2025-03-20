@@ -3,6 +3,7 @@ import logging
 from typing import Union
 
 import requests
+from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
 from src.api.BaseAPIWrapper import BaseAPIWrapper
 from src.api.serializers import MeshNodeSerializer
@@ -31,7 +32,13 @@ class StorageAPIWrapper(BaseAPIWrapper):
         Store a raw packet in the storage API
         """
         # Convert bytes to Base64-encoded strings recursively
+        raw_packet: MeshPacket = packet.get('raw')
         packet = StorageAPIWrapper._sanitise_raw_packet(packet)
+
+        # Some fields are not present in the packet if they're a nullish value, so we need to get them from the raw packet
+        if raw_packet:
+            if 'channel' not in packet:
+                packet['channel'] = raw_packet.channel
 
         logging.debug(f"Storing packet: {packet}")
         response = self._post("/api/raw-packet/", json=packet)
@@ -43,7 +50,7 @@ class StorageAPIWrapper(BaseAPIWrapper):
         """
         Get a list of all nodes stored in the storage API. This list generally does not include position or metrics data.
         """
-        response = requests.get("/api/nodes/")
+        response = self._get("/api/nodes/")
         response_json = response.json()
 
         return [MeshNodeSerializer.from_api_dict(node_data) for node_data in response_json]
