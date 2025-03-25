@@ -1,9 +1,14 @@
 import base64
+import json
 import logging
+import os
+import traceback
+from datetime import datetime
+from pathlib import Path
 from typing import Union
 
-import requests
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
+from requests import HTTPError
 
 from src.api.BaseAPIWrapper import BaseAPIWrapper
 from src.api.serializers import MeshNodeSerializer
@@ -11,6 +16,11 @@ from src.data_classes import MeshNode
 
 
 class StorageAPIWrapper(BaseAPIWrapper):
+    failed_packets_dir: Path
+
+    def __init__(self, base_url: str, token: str = None, failed_packets_dir: str = None):
+        super().__init__(base_url, token)
+        self.failed_packets_dir = Path(failed_packets_dir) if failed_packets_dir else None
 
     @classmethod
     def _sanitise_raw_packet(cls, data):
@@ -41,7 +51,17 @@ class StorageAPIWrapper(BaseAPIWrapper):
                 packet['channel'] = raw_packet.channel
 
         logging.debug(f"Storing packet: {packet}")
-        response = self._post("/api/raw-packet/", json=packet)
+        try:
+            response = self._post("/api/raw-packet/", json=packet)
+        except HTTPError as ex:
+            logging.error(f"Error storing packet: {ex.response.text}")
+            logging.error(f"Packet: {packet}")
+
+            # Dump the packet to a .json file
+            if self.failed_packets_dir:
+                self._dump_failed_packet(packet, ex)
+            return
+
         logging.debug(f"Response: {response.json()}")
 
         return response.json()
@@ -82,3 +102,48 @@ class StorageAPIWrapper(BaseAPIWrapper):
             return MeshNodeSerializer.from_api_dict(response_json)
         else:
             return None
+
+    def _dump_failed_packet(self, packet, ex: HTTPError):
+        raw_packet: MeshPacket = packet.get('raw', None)
+
+        timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+
+        # ensure output dir exists
+        os.makedirs(self.failed_packets_dir, exist_ok=True)
+
+        try:
+            error_info = {
+                'status_code': ex.response.status_code,
+                'reason': ex.response.reason,
+                'text': ex.response.text,
+                'url': ex.response.url,
+                'headers': dict(ex.response.headers),
+                'traceback': traceback.format_exc()
+            }
+            filename = f"failed_packet_{timestamp}_error.json"
+            filepath = self.failed_packets_dir / filename
+            with open(filepath, 'w') as f:
+                json.dump(error_info, f, indent=4)
+            logging.info(f"Error dumped to {filename}")
+        except Exception as dump_ex:
+            logging.error(f"Failed to dump error: {dump_ex}")
+
+        try:
+            filename = f"failed_packet_{timestamp}.json"
+            filepath = self.failed_packets_dir / filename
+            with open(filepath, 'w') as f:
+                json.dump(packet, f, indent=4)
+            logging.info(f"Packet dumped to {filename}")
+        except Exception as dump_ex:
+            logging.error(f"Failed to dump packet: {dump_ex}")
+
+        # Dump the raw packet to a .json file
+        if raw_packet:
+            try:
+                filename = f"failed_packet_{timestamp}_raw.json"
+                filepath = self.failed_packets_dir / filename
+                with open(filepath, 'w') as f:
+                    json.dump(raw_packet, f, indent=4)
+                logging.info(f"Raw packet dumped to {filename}")
+            except Exception as dump_ex:
+                logging.error(f"Failed to dump raw packet: {dump_ex}")

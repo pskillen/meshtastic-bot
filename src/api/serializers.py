@@ -1,5 +1,5 @@
-from abc import ABC
 import datetime
+from abc import ABC
 
 from src.data_classes import MeshNode
 
@@ -86,7 +86,9 @@ class MeshNodeSerializer(AbstractModelSerializer):
             }
         }
 
-        if node.position:
+        # only log a position if it's actually set
+        if node.position and not \
+                (node.position.latitude == 0 and node.position.longitude == 0 and node.position.altitude == 0):
             node_data['position'] = PositionSerializer.to_api_dict(node.position)
 
         if node.device_metrics:
