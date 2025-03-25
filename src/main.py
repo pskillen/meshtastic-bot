@@ -42,6 +42,7 @@ def main():
     command_log_file = data_dir / 'user_cmds.sqlite'
     node_db_file = data_dir / 'node_db.sqlite'
     node_info_file = data_dir / 'node_info.json'
+    failed_packets_dir = data_dir / 'failed_packets'
 
     # Connect to the Meshtastic node over WiFi
     bot = MeshtasticBot(MESHTASTIC_IP)
@@ -53,6 +54,7 @@ def main():
     bot.node_info = node_info
     if STORAGE_API_ROOT:
         bot.storage_api = StorageAPIWrapper(STORAGE_API_ROOT, STORAGE_API_TOKEN)
+        bot.storage_api.failed_packets_dir = failed_packets_dir
 
     try:
         node_info.load_from_file(str(node_info_file))
