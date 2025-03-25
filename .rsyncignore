@@ -11,3 +11,4 @@ src/*.json
 *.sqlite3
 .env
 docker-data/
+data/failed_packets/
