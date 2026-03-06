@@ -36,7 +36,7 @@ jobs:
           pytest test/ --doctest-modules --junitxml=reports/test-results-${{ matrix.python-version }}.xml
 
       - name: Test Report
-        uses: dorny/test-reporter@v1
+        uses: dorny/test-reporter@v2
         with:
           name: pytest-results-${{ matrix.python-version }}
           path: reports/test-results-${{ matrix.python-version }}.xml
