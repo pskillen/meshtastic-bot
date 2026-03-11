@@ -8,6 +8,8 @@ nodes.json
 all_state.json
 data/
 docker-data/
+tmp/
+temp/
 
 # OS files
 .DS_Store
