@@ -9,6 +9,9 @@ all_state.json
 data/
 docker-data/
 
+# OS files
+.DS_Store
+
 ### Python template
 # Byte-compiled / optimized / DLL files
 __pycache__/
