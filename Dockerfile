@@ -1,5 +1,7 @@
-ARG BASE_IMAGE=python:3.12
-FROM ${BASE_IMAGE}
+FROM python:3.14
+
+ARG VERSION=development
+ENV APP_VERSION=${VERSION}
 
 WORKDIR /app
 

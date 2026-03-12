@@ -3,38 +3,21 @@ name: docker-build-and-push
 on:
   workflow_call:
     inputs:
-      VERSION_TAG:
+      VERSION_LABEL:
         required: true
         type: string
-      IS_LATEST:
-        required: false
-        type: boolean
-        default: false
-      IS_PRERELEASE:
-        required: false
-        type: boolean
-        default: false
-
+      ENVIRONMENT:
+        required: true
+        type: string
+        description: "dev | preprod | prod"
 
 permissions:
   contents: read
   packages: write
 
-
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        platform: [ linux/amd64, linux/arm/v7, linux/arm64 ]
-        include:
-          - platform: linux/amd64
-            base_image: "python:3.12"
-          - platform: linux/arm/v7
-            base_image: "ghcr.io/pskillen/meshtastic-bot-armv7-base:py3.12"
-          - platform: linux/arm64
-            base_image: "arm64v8/python:3.12"
 
     steps:
       - name: Checkout Repository
@@ -44,47 +27,85 @@ jobs:
         uses: docker/setup-buildx-action@v4
 
       - name: Log in to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Setup vars
-        run: |
-          PLATFORM_TAG=$(echo "${{ matrix.platform }}" | sed 's|/|-|g')
-          echo "PLATFORM_TAG=$PLATFORM_TAG" >> $GITHUB_ENV
+      - name: Build and Push Multi-Arch Image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository }}:${{ inputs.ENVIRONMENT == 'dev' && 'latest-dev' || inputs.VERSION_LABEL }}
+          build-args: |
+            VERSION=${{ inputs.VERSION_LABEL }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: Build and Push Docker Image
-        run: |
-          docker buildx build \
-            --platform ${{ matrix.platform }} \
-            --build-arg BASE_IMAGE=${{ matrix.base_image }} \
-            -t ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}-${{ env.PLATFORM_TAG }} \
-            --push .
-
-  create-manifest:
+  tag-and-cleanup:
     runs-on: ubuntu-latest
     needs:
       - build-and-push
+    if: inputs.ENVIRONMENT != 'dev'
 
     steps:
       - name: Log in to GitHub Container Registry
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u $GITHUB_ACTOR --password-stdin
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create and Push Multi-Arch Manifest
+      - name: Tag for pre-release (latest-rc + version)
+        if: inputs.ENVIRONMENT == 'preprod'
         run: |
           docker buildx imagetools create \
-            -t ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }} \
-            ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}-linux-amd64 \
-            ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}-linux-arm-v7 \
-            ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}-linux-arm64 
+            -t ghcr.io/${{ github.repository }}:latest-rc \
+            ghcr.io/${{ github.repository }}:${{ inputs.VERSION_LABEL }}
 
-      - name: Tag as Latest or RC
-        if: ${{ inputs.IS_LATEST == true }}
+      - name: Tag for release (latest + semver components)
+        if: inputs.ENVIRONMENT == 'prod'
         run: |
-          if [[ "${{ inputs.IS_PRERELEASE }}" == "true" ]]; then
-            docker buildx imagetools create \
-              -t ghcr.io/${{ github.repository }}:latest-rc \
-              ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}
-          else
-            docker buildx imagetools create \
-              -t ghcr.io/${{ github.repository }}:latest \
-              ghcr.io/${{ github.repository }}:${{ inputs.VERSION_TAG }}
-          fi
+          VERSION="${{ inputs.VERSION_LABEL }}"
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository }}:latest \
+            -t ghcr.io/${{ github.repository }}:${VERSION} \
+            ghcr.io/${{ github.repository }}:${VERSION}
+          # Parse semver and create component tags
+          MAJOR=$(echo "${VERSION}" | cut -d. -f1)
+          MINOR=$(echo "${VERSION}" | cut -d. -f2)
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository }}:${MAJOR} \
+            ghcr.io/${{ github.repository }}:${VERSION}
+          docker buildx imagetools create \
+            -t ghcr.io/${{ github.repository }}:${MAJOR}.${MINOR} \
+            ghcr.io/${{ github.repository }}:${VERSION}
+
+      - name: Delete untagged images
+        uses: quartx-analytics/ghcr-cleaner@v1
+        with:
+          owner-type: user
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository_owner: ${{ github.repository_owner }}
+          repository-name: ${{ github.repository }}
+          delete-untagged: true
+
+  cleanup-dev:
+    runs-on: ubuntu-latest
+    needs:
+      - build-and-push
+    if: inputs.ENVIRONMENT == 'dev'
+
+    steps:
+      - name: Delete untagged images
+        uses: quartx-analytics/ghcr-cleaner@v1
+        with:
+          owner-type: user
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository_owner: ${{ github.repository_owner }}
+          repository-name: ${{ github.repository }}
+          delete-untagged: true
