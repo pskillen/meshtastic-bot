@@ -10,6 +10,7 @@ from requests import HTTPError
 
 from src.api.StorageAPI import StorageAPIWrapper
 from src.commands.factory import CommandFactory
+from src.traceroute import on_traceroute_command
 from src.data_classes import MeshNode
 from src.helpers import pretty_print_last_heard, safe_encode_node_name
 from src.persistence.commands_logger import AbstractCommandLogger
@@ -36,6 +37,7 @@ class MeshtasticBot:
     user_prefs_persistence: AbstractUserPrefsPersistence
 
     storage_apis: list[StorageAPIWrapper]
+    ws_client: object | None  # MeshflowWSClient when configured
 
     def __init__(self, address: str):
         self.address = address
@@ -52,6 +54,7 @@ class MeshtasticBot:
         self.command_logger = None
         self.user_prefs_persistence = None
         self.storage_apis = []
+        self.ws_client = None
 
         pub.subscribe(self.on_receive, "meshtastic.receive")
         pub.subscribe(self.on_receive_text, "meshtastic.receive.text")
@@ -106,6 +109,10 @@ class MeshtasticBot:
         except OSError as ex:
             logging.warning(f"Failed to close connection. Continuing anyway: {ex}")
 
+    def on_traceroute_command(self, target_node_id: int):
+        """Handle traceroute command from WebSocket (e.g. from Meshflow API)."""
+        on_traceroute_command(self, target_node_id)
+
     def on_connection(self, interface, topic=pub.AUTO_TOPIC):
         self.my_nodenum = interface.localNode.nodeNum  # in dec
         self.my_id = f"!{hex(self.my_nodenum)[2:]}"
@@ -113,6 +120,9 @@ class MeshtasticBot:
         self.init_complete = True
         logging.info('Connected to Meshtastic node')
         self.print_nodes()
+
+        if self.ws_client:
+            self.ws_client.start()
 
     def on_receive_text(self, packet: MeshPacket, interface):
         """Callback function triggered when a text message is received."""
