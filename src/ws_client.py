@@ -157,7 +157,18 @@ class MeshflowWSClient:
                         try:
                             target_id = int(target)
                             logger.info(f"MeshflowWSClient: received traceroute command, target={target_id}")
-                            self.on_traceroute(target_id)
+                            # Run in thread so a blocking/long-running TR doesn't block receiving
+                            # further commands (e.g. multiple TRs in quick succession, or TR that never returns)
+                            task = asyncio.create_task(asyncio.to_thread(self.on_traceroute, target_id))
+
+                            def _task_done(t):
+                                if t.cancelled():
+                                    return
+                                exc = t.exception()
+                                if exc:
+                                    logger.warning(f"MeshflowWSClient: traceroute task failed: {exc}")
+
+                            task.add_done_callback(_task_done)
                         except (TypeError, ValueError):
                             logger.warning(f"MeshflowWSClient: invalid traceroute target: {target}")
                     else:
