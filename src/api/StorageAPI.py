@@ -4,6 +4,7 @@ import logging
 import os
 import traceback
 from datetime import datetime
+from json import JSONDecodeError
 from pathlib import Path
 from typing import Union
 
@@ -64,6 +65,12 @@ class StorageAPIWrapper(BaseAPIWrapper):
         """
         Store a raw packet in the storage API
         """
+        # Filter out packet types that the API doesn't support or we don't want to store
+        ignored_ports = [345, 'ROUTING_APP', 'TRACEROUTE_APP', 'ADMIN_APP']
+        portnum = packet.get('decoded', {}).get('portnum')
+        if portnum in ignored_ports:
+            return
+
         # Convert bytes to Base64-encoded strings recursively
         raw_packet: MeshPacket = packet.get('raw')
         packet = StorageAPIWrapper._sanitise_raw_packet(packet)
@@ -85,9 +92,13 @@ class StorageAPIWrapper(BaseAPIWrapper):
                 self._dump_failed_packet(packet, ex)
             return
 
-        logging.debug(f"Response: {response.json()}")
-
-        return response.json()
+        try:
+            response_json = response.json()
+            logging.debug(f"Response: {response_json}")
+            return response_json
+        except JSONDecodeError:
+            logging.debug(f"Response (not JSON): {response.text}")
+            return {'text': response.text}
 
     def list_nodes(self) -> list[MeshNode]:
         """

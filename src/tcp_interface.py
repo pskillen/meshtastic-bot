@@ -1,5 +1,6 @@
 import logging
 import sys
+from pubsub import pub
 import time
 from queue import Queue
 from typing import Optional, Callable, Union
@@ -61,6 +62,13 @@ class AutoReconnectTcpInterface(SupportsMessageReactionInterface, TCPInterface):
         # Store packets in a queue and resend them after reconnecting
         # This will involve exposing the queue, and reloading the queue in bot.py since we create a new interface object
 
+    def onResponseTraceRoute(self, packet, routeDiscovery):
+        """
+        Callback for when a traceroute response is received.
+        """
+        super().onResponseTraceRoute(packet, routeDiscovery)
+        pub.sendMessage("meshtastic.traceroute", packet=packet, route=routeDiscovery)
+
     def sendHeartbeat(self):
         try:
             super().sendHeartbeat()
@@ -79,6 +87,7 @@ class AutoReconnectTcpInterface(SupportsMessageReactionInterface, TCPInterface):
             pkiEncrypted: Optional[bool] = False,
             publicKey: Optional[bytes] = None,
     ):
+        logging.info(f"DEBUG: Sending packet to {destinationId} (Payload: {meshPacket.decoded.payload})")
         try:
             super()._sendPacket(
                 meshPacket=meshPacket,

@@ -13,7 +13,7 @@ class HelloCommand(AbstractCommand):
         sender = self.bot.node_db.get_by_id(sender_id)
         sender_name = sender.long_name if sender else sender_id
 
-        response = f"Hello, {sender_name}! How can I help you? (tip: try !help). I'm a bot maintained by PDY4 / pskillen@gmail.com"
+        response = f"Hello, {sender_name}! (tip: try !help). I'm a bot maintained by MTEK original PDY4 / https://github.com/pskillen/meshtastic-bot"
         self.reply_to(sender_id, response)
 
     def get_command_for_logging(self, message: str) -> (str, list[str] | None, str | None):

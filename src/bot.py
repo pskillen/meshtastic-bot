@@ -52,8 +52,10 @@ class MeshtasticBot:
         self.command_logger = None
         self.user_prefs_persistence = None
         self.storage_apis = []
+        self.pending_traces = {}
 
         pub.subscribe(self.on_receive, "meshtastic.receive")
+        pub.subscribe(self.on_traceroute, "meshtastic.traceroute")
         pub.subscribe(self.on_receive_text, "meshtastic.receive.text")
         pub.subscribe(self.on_node_updated, "meshtastic.node.updated")
         pub.subscribe(self.on_connection, "meshtastic.connection.established")
@@ -150,6 +152,25 @@ class MeshtasticBot:
         from_id = packet['fromId']
         sender = self.node_db.get_by_id(from_id)
 
+        logging.info(f"DEBUG: Received public message from {sender.long_name if sender else from_id}: {message}")
+
+        # Allow !tr in public channels
+        words = message.split()
+        if words and words[0].lower() == "!tr":
+            logging.info(f"Received public !tr from {sender.long_name if sender else from_id}")
+            # Import here to avoid circular imports if any, though factory is better
+            from src.commands.factory import CommandFactory
+            command_instance = CommandFactory.create_command("!tr", self)
+            if command_instance:
+                try:
+                    # By default commands reply in DM (reply_in_dm).
+                    # If we want public reply, we'd need to modify the command or use reply_in_channel.
+                    # But for now, let's just let it run. It will DM the user back (which is cleaner).
+                    command_instance.handle_packet(packet)
+                    return # Stop processing responders
+                except Exception as e:
+                    logging.error(f"Error handling public command: {e}")
+
         responder = ResponderFactory.match_responder(message, self)
         if responder:
             try:
@@ -162,7 +183,56 @@ class MeshtasticBot:
             except Exception as e:
                 logging.error(f"Error handling message: {e}")
 
+    def on_traceroute(self, packet, route):
+        """Callback for when a traceroute response is received."""
+        target_id = packet.get('fromId')
+        
+        if target_id not in self.pending_traces:
+            logging.debug(f"Received traceroute from {target_id} but no pending request found.")
+            return
+
+        requester_id = self.pending_traces.pop(target_id)
+        
+        # Format the OUTBOUND route
+        route_ids = route.route
+        hops = []
+        for node_id_int in route_ids:
+            # Convert int to !hex string
+            node_id_str = f"!{node_id_int:08x}"
+            node = self.node_db.get_by_id(node_id_str)
+            if node:
+                 hops.append(f"{node.short_name}")
+            else:
+                 hops.append(f"{node_id_str}")
+
+        route_str = " -> ".join(hops) if hops else "Direct (or unknown)"
+        
+        response_out = f"Trace TO {target_id} ({len(hops)} hops):\n{route_str}"
+        logging.info(f"Sending traceroute OUT result to {requester_id}: {response_out}")
+        self.interface.sendText(response_out, destinationId=requester_id)
+        
+        # Format the INBOUND route (if available)
+        if hasattr(route, 'route_back') and route.route_back:
+            hops_back = []
+            for node_id_int in route.route_back:
+                 node_id_str = f"!{node_id_int:08x}"
+                 node = self.node_db.get_by_id(node_id_str)
+                 if node:
+                     hops_back.append(f"{node.short_name}")
+                 else:
+                     hops_back.append(f"{node_id_str}")
+            back_str = " -> ".join(hops_back)
+            
+            response_in = f"Trace FROM {target_id} ({len(hops_back)} hops):\n{back_str}"
+            logging.info(f"Sending traceroute IN result to {requester_id}: {response_in}")
+            # Small delay to ensure order
+            time.sleep(1) 
+            self.interface.sendText(response_in, destinationId=requester_id)
+
     def on_receive(self, packet: MeshPacket, interface):
+        if packet.get('fromId') == '!69828b98':
+            logging.info(f"DEBUG: Received ANY packet from mte4: {packet}")
+
         # dump the packet to disk (if enabled)
         dump_packet(packet)
 
