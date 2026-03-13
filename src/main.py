@@ -39,6 +39,12 @@ STORAGE_API_2_TOKEN = os.getenv("STORAGE_API_2_TOKEN", None)
 STORAGE_API_2_VERSION = int(os.getenv("STORAGE_API_2_VERSION", 1))
 MESHFLOW_WS_URL = os.getenv("MESHFLOW_WS_URL")  # e.g. ws://localhost:8000; derived from storage API if unset
 
+# Comma-separated portnums to skip when submitting to API (e.g. 345,ROUTING_APP)
+_ignore_portnums_raw = os.getenv("IGNORE_PORTNUMS", "")
+IGNORE_PORTNUMS = frozenset(
+    p.strip().upper() for p in _ignore_portnums_raw.split(",") if p.strip()
+)
+
 
 def main():
     # Ensure data dir exists
@@ -53,6 +59,7 @@ def main():
 
     # Connect to the Meshtastic node over WiFi
     bot = MeshtasticBot(MESHTASTIC_IP)
+    bot.ignore_portnums = IGNORE_PORTNUMS
     bot.admin_nodes = ADMIN_NODES
     bot.user_prefs_persistence = SqliteUserPrefsPersistence(str(user_prefs_file))
     bot.command_logger = SqliteCommandLogger(str(command_log_file))
