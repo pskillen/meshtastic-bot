@@ -5,20 +5,31 @@ Traceroute command handling: send traceroute requests and upload TRACEROUTE_APP 
 import logging
 from typing import TYPE_CHECKING
 
+import os
+
 if TYPE_CHECKING:
     from src.bot import MeshtasticBot
 
 logger = logging.getLogger(__name__)
 
+TR_HOPS_LIMIT = int(os.getenv("TR_HOPS_LIMIT", '5'))
+if TR_HOPS_LIMIT < 3:
+    logger.warning(f"TR_HOPS_LIMIT is less than 3, traceroutes are likely to fail. Capping at 3.")
+    TR_HOPS_LIMIT = 3
+elif TR_HOPS_LIMIT < 5:
+    logger.warning(f"TR_HOPS_LIMIT is less than 5, traceroutes are likely to fail")
 
-def on_traceroute_command(bot: "MeshtasticBot", target_node_id: int, hop_limit: int = 5, channel_index: int = 0):
+if TR_HOPS_LIMIT > 7:
+    logger.warning(f"TR_HOPS_LIMIT is greater than the Meshtastic limit of 7. Capping at 7.")
+    TR_HOPS_LIMIT = 7
+
+def on_traceroute_command(bot: "MeshtasticBot", target_node_id: int, channel_index: int = 0):
     """
     Send a traceroute request to the target node.
 
     Args:
         bot: The MeshtasticBot instance
         target_node_id: Target node ID (integer, e.g. 1623194643)
-        hop_limit: Maximum hops for the traceroute (default 5)
         channel_index: Channel index (default 0)
     """
     if not bot.interface or not bot.init_complete:
@@ -26,7 +37,7 @@ def on_traceroute_command(bot: "MeshtasticBot", target_node_id: int, hop_limit: 
         return
 
     try:
-        bot.interface.sendTraceRoute(target_node_id, hop_limit, channelIndex=channel_index)
+        bot.interface.sendTraceRoute(target_node_id, TR_HOPS_LIMIT, channelIndex=channel_index)
         logger.info(f"Traceroute: sent to target={target_node_id}")
     except Exception as e:
         logger.error(f"Traceroute: failed to send to {target_node_id}: {e}")
