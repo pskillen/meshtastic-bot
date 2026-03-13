@@ -13,7 +13,7 @@ jobs:
     steps:
       - name: Extract Release Tag
         id: get_tag
-        run: echo "VERSION_LABEL=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+        run: echo "VERSION_LABEL=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
 
     outputs:
       VERSION_LABEL: ${{ steps.get_tag.outputs.VERSION_LABEL }}
