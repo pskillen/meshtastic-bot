@@ -76,18 +76,26 @@ class StorageAPIWrapper(BaseAPIWrapper):
         logging.debug(f"Storing packet: {packet}")
         try:
             response = self._post(self._get_url('raw_packet'), json=packet)
+
+            response_json = response.json()
+            return response_json
         except HTTPError as ex:
-            logging.error(f"Error storing packet: {ex.response.text}")
+            logging.error(f"HTTP error storing packet: {ex.response.text}")
             logging.error(f"Packet: {packet}")
 
             # Dump the packet to a .json file
             if self.failed_packets_dir:
                 self._dump_failed_packet(packet, ex)
             return
+        except Exception as ex:
+            logging.error(f"Error storing packet: {ex}")
+            logging.error(f"Packet: {packet}")
 
-        logging.debug(f"Response: {response.json()}")
+            # Dump the packet to a .json file
+            if self.failed_packets_dir:
+                self._dump_failed_packet(packet, ex)
 
-        return response.json()
+            return
 
     def list_nodes(self) -> list[MeshNode]:
         """

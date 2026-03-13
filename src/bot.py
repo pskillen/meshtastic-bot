@@ -180,9 +180,12 @@ class MeshtasticBot:
 
         portnum = packet.get("decoded", {}).get("portnum", "unknown")
         portnum_key = str(portnum).upper()
+        has_decoded = 'decoded' in packet or 'decrypted' in packet
         if self.ignore_portnums and portnum_key in self.ignore_portnums:
             logging.info(f"Skipping API submission for packet with portnum {portnum} (in IGNORE_PORTNUMS)")
             # Continue with node_info etc. below, just skip storage API
+        elif not has_decoded:
+            pass  # Skip API submission for packets with no decoded data
         else:
             for storage_api in self.storage_apis:
                 try:
