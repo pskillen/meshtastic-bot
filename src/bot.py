@@ -24,6 +24,7 @@ from src.tcp_interface import AutoReconnectTcpInterface, SupportsMessageReaction
 
 class MeshtasticBot:
     admin_nodes: list[str]
+    ignore_portnums: frozenset  # Portnums to skip when submitting to API (from IGNORE_PORTNUMS env)
 
     interface: SupportsMessageReactionInterface
     init_complete: bool
@@ -43,6 +44,7 @@ class MeshtasticBot:
         self.address = address
 
         self.admin_nodes = []
+        self.ignore_portnums = frozenset()
 
         self.interface = None
         self.init_complete = False
@@ -176,15 +178,24 @@ class MeshtasticBot:
         # dump the packet to disk (if enabled)
         dump_packet(packet)
 
-        for storage_api in self.storage_apis:
-            try:
-                storage_api.store_raw_packet(packet)
-            except HTTPError as ex:
-                logging.warning(f"Error storing packet: {ex.response.text}")
-                pass
-            except Exception as ex:
-                logging.warning(f"Error storing packet in API: {ex}")
-                pass
+        portnum = packet.get("decoded", {}).get("portnum", "unknown")
+        portnum_key = str(portnum).upper()
+        has_decoded = 'decoded' in packet or 'decrypted' in packet
+        if self.ignore_portnums and portnum_key in self.ignore_portnums:
+            logging.info(f"Skipping API submission for packet with portnum {portnum} (in IGNORE_PORTNUMS)")
+            # Continue with node_info etc. below, just skip storage API
+        elif not has_decoded:
+            pass  # Skip API submission for packets with no decoded data
+        else:
+            for storage_api in self.storage_apis:
+                try:
+                    storage_api.store_raw_packet(packet)
+                except HTTPError as ex:
+                    logging.warning(f"Error storing packet: {ex.response.text}")
+                    pass
+                except Exception as ex:
+                    logging.warning(f"Error storing packet in API: {ex}")
+                    pass
 
         sender = packet['fromId']
         node = self.node_db.get_by_id(sender)
