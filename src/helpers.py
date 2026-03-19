@@ -3,7 +3,10 @@ import urllib.parse
 from datetime import datetime, timezone
 
 
-def pretty_print_last_heard(last_heard_timestamp: int | datetime) -> str:
+def pretty_print_last_heard(last_heard_timestamp: int | datetime | None) -> str:
+    if last_heard_timestamp is None:
+        return "never"
+
     if not isinstance(last_heard_timestamp, datetime):
         last_heard = datetime.fromtimestamp(last_heard_timestamp, timezone.utc)
     else:
