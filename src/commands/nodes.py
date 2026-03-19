@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from meshtastic.protobuf.mesh_pb2 import MeshPacket
 
 from src.bot import MeshtasticBot
@@ -24,8 +26,13 @@ class NodesCommand(AbstractCommandWithSubcommands):
         online_nodes = self.bot.node_info.get_online_nodes()
         offline_nodes = self.bot.node_info.get_offline_nodes()
 
-        # get nodes sorted by last_head
-        sorted_nodes = sorted(nodes, key=lambda n: self.bot.node_info.get_last_heard(n.id), reverse=True)
+        # get nodes sorted by last_heard (most recent first)
+        # Nodes we've never heard from yet have last_heard=None, so treat them as very old.
+        sorted_nodes = sorted(
+            nodes,
+            key=lambda n: self.bot.node_info.get_last_heard(n.id) or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )
         response = f"{len(online_nodes)} nodes online, {len(offline_nodes)} offline."
 
         # Add up to 10 nodes with the most packets received today
