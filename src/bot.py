@@ -10,7 +10,6 @@ from requests import HTTPError
 
 from src.api.StorageAPI import StorageAPIWrapper
 from src.commands.factory import CommandFactory
-from src.traceroute import on_traceroute_command
 from src.data_classes import MeshNode
 from src.helpers import pretty_print_last_heard, safe_encode_node_name
 from src.persistence.commands_logger import AbstractCommandLogger
@@ -19,12 +18,16 @@ from src.persistence.node_info import AbstractNodeInfoStore
 from src.persistence.packet_dump import dump_packet
 from src.persistence.user_prefs import AbstractUserPrefsPersistence
 from src.responders.responder_factory import ResponderFactory
-from src.tcp_interface import AutoReconnectTcpInterface, SupportsMessageReactionInterface
+from src.tcp_interface import (AutoReconnectTcpInterface,
+                               SupportsMessageReactionInterface)
+from src.traceroute import on_traceroute_command
 
 
 class MeshtasticBot:
     admin_nodes: list[str]
-    ignore_portnums: frozenset  # Portnums to skip when submitting to API (from IGNORE_PORTNUMS env)
+    ignore_portnums: (
+        frozenset  # Portnums to skip when submitting to API (from IGNORE_PORTNUMS env)
+    )
 
     interface: SupportsMessageReactionInterface
     init_complete: bool
@@ -68,7 +71,7 @@ class MeshtasticBot:
         self.init_complete = False
 
         old_packet_queue = None
-        if self.interface and hasattr(self.interface, 'packet_queue'):
+        if self.interface and hasattr(self.interface, "packet_queue"):
             old_packet_queue = self.interface.packet_queue
 
         self.interface = AutoReconnectTcpInterface(
@@ -98,7 +101,9 @@ class MeshtasticBot:
                 if backoff_time == max_backoff_time:
                     logging.error("Max backoff time reached. Exiting.")
                     sys.exit(1)
-                backoff_time = min(backoff_time * backoff_rate, max_backoff_time)  # Exponential back-off
+                backoff_time = min(
+                    backoff_time * backoff_rate, max_backoff_time
+                )  # Exponential back-off
                 logging.info(f"Next reconnection attempt in {backoff_time} seconds")
                 time.sleep(backoff_time)
 
@@ -120,7 +125,7 @@ class MeshtasticBot:
         self.my_id = f"!{hex(self.my_nodenum)[2:]}"
 
         self.init_complete = True
-        logging.info('Connected to Meshtastic node')
+        logging.info("Connected to Meshtastic node")
         self.print_nodes()
 
         if self.ws_client:
@@ -129,7 +134,7 @@ class MeshtasticBot:
     def on_receive_text(self, packet: MeshPacket, interface):
         """Callback function triggered when a text message is received."""
 
-        to_id = packet['toId']
+        to_id = packet["toId"]
 
         if to_id == self.my_id:
             self.handle_private_message(packet)
@@ -138,11 +143,13 @@ class MeshtasticBot:
 
     def handle_private_message(self, packet: MeshPacket):
         """Handle private messages."""
-        message = packet['decoded']['text']
-        from_id = packet['fromId']
+        message = packet["decoded"]["text"]
+        from_id = packet["fromId"]
 
         sender = self.node_db.get_by_id(from_id)
-        logging.info(f"Received private message: '{message}' from {sender.long_name if sender else from_id}")
+        logging.info(
+            f"Received private message: '{message}' from {sender.long_name if sender else from_id}"
+        )
 
         words = message.split()
         command_name = words[0]
@@ -158,8 +165,8 @@ class MeshtasticBot:
 
     def handle_public_message(self, packet: MeshPacket):
         """Handle public messages."""
-        message = packet['decoded']['text']
-        from_id = packet['fromId']
+        message = packet["decoded"]["text"]
+        from_id = packet["fromId"]
         sender = self.node_db.get_by_id(from_id)
 
         responder = ResponderFactory.match_responder(message, self)
@@ -169,8 +176,11 @@ class MeshtasticBot:
 
                 if outcome:
                     logging.info(
-                        f"Handled message from {sender.long_name if sender else from_id} with responder {responder.__class__.__name__}: {message}")
-                    self.command_logger.log_responder_handled(from_id, responder, message)
+                        f"Handled message from {sender.long_name if sender else from_id} with responder {responder.__class__.__name__}: {message}"
+                    )
+                    self.command_logger.log_responder_handled(
+                        from_id, responder, message
+                    )
             except Exception as e:
                 logging.error(f"Error handling message: {e}")
 
@@ -180,12 +190,26 @@ class MeshtasticBot:
 
         portnum = packet.get("decoded", {}).get("portnum", "unknown")
         portnum_key = str(portnum).upper()
-        has_decoded = 'decoded' in packet or 'decrypted' in packet
+        has_decoded = "decoded" in packet or "decrypted" in packet
+
+        # Skip device metrics from self - node sends 1/min to connected clients;
+        # another bot will capture when broadcast over the air
+        sender = packet.get("fromId")
+        skip_self_device_metrics = (
+            sender == self.my_id
+            and portnum_key == "TELEMETRY_APP"
+            and "deviceMetrics" in (packet.get("decoded", {}).get("telemetry") or {})
+        )
+
         if self.ignore_portnums and portnum_key in self.ignore_portnums:
-            logging.info(f"Skipping API submission for packet with portnum {portnum} (in IGNORE_PORTNUMS)")
+            logging.info(
+                f"Skipping API submission for packet with portnum {portnum} (in IGNORE_PORTNUMS)"
+            )
             # Continue with node_info etc. below, just skip storage API
         elif not has_decoded:
             pass  # Skip API submission for packets with no decoded data
+        elif skip_self_device_metrics:
+            pass  # Skip device metrics from self - another bot will capture over the air
         else:
             for storage_api in self.storage_apis:
                 try:
@@ -197,15 +221,14 @@ class MeshtasticBot:
                     logging.warning(f"Error storing packet in API: {ex}")
                     pass
 
-        sender = packet['fromId']
         node = self.node_db.get_by_id(sender)
         if not node:
             # logging.warning(f"Received packet from unknown sender {sender}")
             return
 
         if node:
-            portnum = packet['decoded']['portnum'] if 'decoded' in packet else 'unknown'
-            if sender == self.my_id and portnum == 'TELEMETRY_APP':
+            portnum = packet["decoded"]["portnum"] if "decoded" in packet else "unknown"
+            if sender == self.my_id and portnum == "TELEMETRY_APP":
                 # Ignore telemetry packets sent by self
                 pass
             else:
@@ -213,12 +236,13 @@ class MeshtasticBot:
                 self.node_info.node_packet_received(sender, portnum)
 
         if sender == self.my_id:
-            recipient_id = packet['toId']
+            recipient_id = packet["toId"]
             recipient = self.node_db.get_by_id(recipient_id)
-            portnum = packet['decoded']['portnum']
+            portnum = packet["decoded"]["portnum"]
 
             logging.debug(
-                f"Received packet from self: {recipient.long_name if recipient else recipient_id} (port {portnum})")
+                f"Received packet from self: {recipient.long_name if recipient else recipient_id} (port {portnum})"
+            )
 
     def on_node_updated(self, node, interface):
         if interface.localNode and self.my_nodenum is None:
@@ -226,9 +250,9 @@ class MeshtasticBot:
             self.my_id = f"!{hex(self.my_nodenum)[2:]}"
 
         # Check if the node is a new user
-        if node['user'] is not None:
+        if node["user"] is not None:
             mesh_node = MeshNode.from_dict(node)
-            last_heard_int = node.get('lastHeard', 0)
+            last_heard_int = node.get("lastHeard", 0)
             last_heard = datetime.fromtimestamp(last_heard_int, tz=timezone.utc)
             self.node_db.store_node(mesh_node)
             self.node_info.update_last_heard(mesh_node.user.id, last_heard)
@@ -245,7 +269,9 @@ class MeshtasticBot:
 
             if self.init_complete:
                 last_heard_str = pretty_print_last_heard(last_heard)
-                logging.info(f"New user: {mesh_node.user.long_name} (last heard {last_heard_str})")
+                logging.info(
+                    f"New user: {mesh_node.user.long_name} (last heard {last_heard_str})"
+                )
 
     def print_nodes(self):
         # filter nodes where last heard is more than 2 hours ago
@@ -268,9 +294,9 @@ class MeshtasticBot:
 
     def get_global_context(self):
         return {
-            'nodes': self.node_db.list_nodes(),
-            'online_nodes': self.node_info.get_online_nodes(),
-            'offline_nodes': self.node_info.get_offline_nodes(),
+            "nodes": self.node_db.list_nodes(),
+            "online_nodes": self.node_info.get_online_nodes(),
+            "offline_nodes": self.node_info.get_offline_nodes(),
         }
 
     def start_scheduler(self):
